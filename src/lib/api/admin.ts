@@ -93,6 +93,15 @@ export function adminGetJob(id: number): Promise<Job> {
 	return apiFetch<Job>(`/api/v1/admin/jobs/${id}`);
 }
 
+// ── Filesystem ────────────────────────────────────────────────────────────────
+
+export function adminListDirectories(path: string): Promise<string[]> {
+	const url = path
+		? `/api/v1/admin/directories/${path.split('/').map(encodeURIComponent).join('/')}`
+		: '/api/v1/admin/directories';
+	return apiFetch<string[]>(url);
+}
+
 // ── Maintenance ───────────────────────────────────────────────────────────────
 
 export function adminOrphanCleanup(): Promise<{ job_id: number }> {

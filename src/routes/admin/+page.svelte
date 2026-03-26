@@ -21,6 +21,7 @@
 	} from '$lib/api/admin';
 	import { collectionCoverUrl } from '$lib/api/media';
 	import ConfirmPopup from '$lib/components/ConfirmPopup.svelte';
+	import PathBrowser from '$lib/components/PathBrowser.svelte';
 	import Toast from '$lib/components/Toast.svelte';
 	import type { AdminCollection } from '$lib/types';
 
@@ -66,21 +67,36 @@
 	let createCollError = $state('');
 	let createCollLoading = $state(false);
 
+	$effect(() => {
+		if (newCollPath) {
+			const segments = newCollPath.split('/');
+			newCollName = segments[segments.length - 1];
+		}
+	});
+
 	async function handleCreateCollection() {
 		createCollError = '';
-		if (!newCollName.trim() || !newCollPath.trim()) {
-			createCollError = 'Name and path are required.';
+		if (!newCollPath.trim()) {
+			createCollError = 'Please select a directory.';
+			return;
+		}
+		if (!newCollName.trim()) {
+			createCollError = 'Name is required.';
 			return;
 		}
 		createCollLoading = true;
 		try {
-			const res = await adminCreateCollection(newCollName.trim(), newCollType, newCollPath.trim());
-			showToast(`Collection created (ID: ${res.id}). Scan job #${res.scan_job_id} queued.`);
+			const name = newCollName.trim();
+			const path = newCollPath.trim();
+			const type = newCollType;
+			const res = await adminCreateCollection(name, type, path);
+			showToast(`Collection created. Scan job #${res.scan_job_id} queued.`);
 			newCollName = '';
 			newCollPath = '';
 			newCollType = 'image:photo';
 			showCreateCollection = false;
 			queryClient.invalidateQueries({ queryKey: ['admin-collections'] });
+			openGrantAccess({ id: res.id, name, type, relative_path: path, is_enabled: true, manual_cover: false, last_scanned_at: null });
 		} catch (e: unknown) {
 			createCollError = e instanceof Error ? e.message : 'Failed to create collection.';
 		} finally {
@@ -357,25 +373,19 @@
 <!-- Create Collection Popup -->
 {#if showCreateCollection}
 	<div class="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4">
-		<div class="bg-surface w-full max-w-md rounded-xl p-6">
+		<div class="bg-surface w-full max-w-xl rounded-xl p-6">
 			<h3 class="text-text-primary mb-4 text-lg font-semibold">Create Collection</h3>
 			<form onsubmit={(e) => { e.preventDefault(); handleCreateCollection(); }} class="space-y-4">
+				<div>
+					<label class="text-text-secondary mb-1 block text-sm">Directory</label>
+					<PathBrowser bind:selectedPath={newCollPath} />
+				</div>
 				<div>
 					<label for="coll-name" class="text-text-secondary mb-1 block text-sm">Name</label>
 					<input
 						id="coll-name"
 						type="text"
 						bind:value={newCollName}
-						class="bg-surface-raised border-border text-text-primary w-full rounded-lg border px-3 py-2 focus:border-accent focus:outline-none"
-					/>
-				</div>
-				<div>
-					<label for="coll-path" class="text-text-secondary mb-1 block text-sm">Path (relative to media root)</label>
-					<input
-						id="coll-path"
-						type="text"
-						bind:value={newCollPath}
-						placeholder="photos/family"
 						class="bg-surface-raised border-border text-text-primary w-full rounded-lg border px-3 py-2 focus:border-accent focus:outline-none"
 					/>
 				</div>
