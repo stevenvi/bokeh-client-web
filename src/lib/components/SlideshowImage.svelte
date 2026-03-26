@@ -14,7 +14,18 @@
 
 	let { item, active, zoomed = false, onZoom, onZoomExit }: Props = $props();
 
-	let fullLoaded = $state(false);
+	// Track which item id has fired onload so we can remember it without an effect.
+	// Using $derived.by (part of the reactive graph) ensures fullLoaded is always
+	// correct before any DOM update — no effect scheduling lag.
+	let loadedId = $state<number | null>(null);
+	const fullLoaded = $derived.by(() => {
+		if (loadedId === item.id) return true;
+		// Check if the browser already has this image decoded in cache.
+		const checkImg = new Image();
+		checkImg.src = imageVariantUrl(item.id, variant);
+		return checkImg.complete && checkImg.naturalWidth > 0;
+	});
+
 	let showDzi = $state(false);
 	let hideBackdrop = $state(false);
 	let dziFadingOut = $state(false);
@@ -25,13 +36,9 @@
 	const variant = $derived(selectVariant(window.innerWidth, window.innerHeight));
 	const fullSrc = $derived(imageVariantUrl(item.id, variant));
 
-	// Reset state when item changes
+	// Reset DZI/visual state when item changes
 	$effect(() => {
 		item; // track
-		// Check if the variant image is already in the browser cache
-		const checkImg = new Image();
-		checkImg.src = imageVariantUrl(item.id, variant);
-		fullLoaded = checkImg.complete && checkImg.naturalWidth > 0;
 		showDzi = false;
 		hideBackdrop = false;
 		dziFadingOut = false;
@@ -60,7 +67,7 @@
 	});
 
 	function onFullLoad() {
-		fullLoaded = true;
+		loadedId = item.id;
 	}
 
 	function initDzi() {

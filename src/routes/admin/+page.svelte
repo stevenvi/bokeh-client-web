@@ -387,6 +387,7 @@
 						class="bg-surface-raised border-border text-text-primary w-full rounded-lg border px-3 py-2 focus:border-accent focus:outline-none"
 					>
 						<option value="image:photo">Photo Album</option>
+						<option value="audio:music">Music Library</option>
 					</select>
 				</div>
 				{#if createCollError}

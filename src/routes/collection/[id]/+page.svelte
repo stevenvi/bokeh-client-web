@@ -5,6 +5,7 @@
 	import { getCollection } from '$lib/api/collections';
 	import { navigationStore } from '$lib/stores/navigation';
 	import PhotoAlbumView from '$lib/components/PhotoAlbumView.svelte';
+	import MusicCollectionView from '$lib/components/MusicCollectionView.svelte';
 	import UnsupportedCollectionView from '$lib/components/UnsupportedCollectionView.svelte';
 
 	const collectionId = $derived(Number(page.params.id));
@@ -18,14 +19,21 @@
 
 	$effect(() => {
 		if ($collectionQuery.data) {
-			navigationStore.push({ id: $collectionQuery.data.id, name: $collectionQuery.data.name });
+			const collection = $collectionQuery.data;
+			// Root collections (no parent) start a fresh breadcrumb trail rather than
+			// appending to whatever was previously navigated.
+			if (collection.parent_collection_id == null) {
+				navigationStore.reset();
+			}
+			navigationStore.push({ id: collection.id, name: collection.name, path: `/collection/${collection.id}` });
 		}
 	});
 
 	function onKeyDown(e: KeyboardEvent) {
 		if (e.key !== 'Escape') return;
-		// Photo collections handle escape in PhotoAlbumView
+		// Photo and music collections handle escape in their own views
 		if ($collectionQuery.data?.type === 'image:photo') return;
+		if ($collectionQuery.data?.type === 'audio:music') return;
 		const parentId = $collectionQuery.data?.parent_collection_id;
 		if (parentId != null) {
 			goto(`/collection/${parentId}`);
@@ -52,6 +60,8 @@
 		{@const collection = $collectionQuery.data}
 		{#if collection.type === 'image:photo'}
 			<PhotoAlbumView collectionId={collectionId} collectionName={collection.name} parentCollectionId={collection.parent_collection_id} />
+		{:else if collection.type === 'audio:music' && collection.parent_collection_id == null}
+			<MusicCollectionView collectionId={collectionId} collectionName={collection.name} parentCollectionId={collection.parent_collection_id} />
 		{:else}
 			<UnsupportedCollectionView collectionName={collection.name} collectionType={collection.type} />
 		{/if}

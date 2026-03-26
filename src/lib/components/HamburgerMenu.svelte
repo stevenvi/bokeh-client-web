@@ -24,15 +24,15 @@
 		goto('/');
 	}
 
-	function goTo(id: number) {
-		navigationStore.popTo(id);
-		goto(`/collection/${id}`);
+	function goTo(path: string) {
+		navigationStore.popTo(path);
+		goto(path);
 	}
 
 	function goBack() {
 		const crumbs = currentCrumbs;
 		if (crumbs.length >= 2) {
-			goTo(crumbs[crumbs.length - 2].id);
+			goTo(crumbs[crumbs.length - 2].path);
 		} else {
 			goHome();
 		}
@@ -52,7 +52,7 @@
 			// Show all: each entry gets its own segment
 			return crumbs.map((c, i) => ({
 				type: 'entry' as const,
-				id: c.id,
+				path: c.path,
 				name: c.name,
 				isLeaf: i === crumbs.length - 1
 			}));
@@ -61,9 +61,9 @@
 		const first = crumbs[0];
 		const leaf = crumbs[crumbs.length - 1];
 		return [
-			{ type: 'entry' as const, id: first.id, name: first.name, isLeaf: false },
-			{ type: 'ellipsis' as const, id: 0, name: '...', isLeaf: false },
-			{ type: 'entry' as const, id: leaf.id, name: leaf.name, isLeaf: true }
+			{ type: 'entry' as const, path: first.path, name: first.name, isLeaf: false },
+			{ type: 'ellipsis' as const, path: '', name: '...', isLeaf: false },
+			{ type: 'entry' as const, path: leaf.path, name: leaf.name, isLeaf: true }
 		];
 	});
 
@@ -137,7 +137,7 @@
 				Home
 			</button>
 
-			{#each breadcrumbSegments() as seg (seg.type === 'ellipsis' ? 'ellipsis' : seg.id)}
+			{#each breadcrumbSegments() as seg (seg.type === 'ellipsis' ? 'ellipsis' : seg.path)}
 				<svg class="text-text-muted h-4 w-4 flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor">
 					<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8.25 4.5l7.5 7.5-7.5 7.5" />
 				</svg>
@@ -150,7 +150,7 @@
 				{:else}
 					<button
 						class="text-text-secondary hover:text-text-primary max-w-[24rem] flex-shrink-0 truncate text-sm transition-colors"
-						onclick={() => goTo(seg.id)}
+						onclick={() => goTo(seg.path)}
 					>
 						{seg.name}
 					</button>

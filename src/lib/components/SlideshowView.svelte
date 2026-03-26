@@ -168,7 +168,7 @@
 		};
 	});
 
-	function advance(dir: 1 | -1) {
+	async function advance(dir: 1 | -1) {
 		const next = currentIndex + dir;
 		if (next < 0 || next >= items.length) return;
 		if (transitioning) return;
@@ -184,10 +184,13 @@
 		stripAnimated = true;
 		stripOffsetPx = dir === 1 ? -window.innerWidth : window.innerWidth;
 
-		setTimeout(() => {
-			// Snap back to center with new currentIndex (no animation)
+		setTimeout(async () => {
+			// Update content while the center slot is still off-screen (strip at offset).
+			// This ensures the center has the correct new item before it becomes visible.
 			stripAnimated = false;
 			currentIndex = next;
+			await tick();
+			// Now snap back — center slot already has new content, no flicker.
 			stripOffsetPx = 0;
 			transitioning = false;
 		}, 250);
@@ -246,9 +249,10 @@
 				await tick();
 				stripAnimated = true;
 				stripOffsetPx = dir === 1 ? -window.innerWidth : window.innerWidth;
-				setTimeout(() => {
+				setTimeout(async () => {
 					stripAnimated = false;
 					currentIndex = next;
+					await tick();
 					stripOffsetPx = 0;
 					transitioning = false;
 				}, 250);

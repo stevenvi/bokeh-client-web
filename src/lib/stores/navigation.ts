@@ -3,6 +3,7 @@ import { writable } from 'svelte/store';
 export interface BreadcrumbEntry {
 	id: number;
 	name: string;
+	path: string;
 }
 
 function createNavigationStore() {
@@ -19,8 +20,9 @@ function createNavigationStore() {
 
 		push(entry: BreadcrumbEntry) {
 			update((crumbs) => {
-				// Avoid duplicates if navigating to the same collection.
-				const existing = crumbs.findIndex((c) => c.id === entry.id);
+				// Avoid duplicates by path, since IDs can collide across entity types
+				// (e.g. an artist ID may equal a collection ID).
+				const existing = crumbs.findIndex((c) => c.path === entry.path);
 				if (existing >= 0) {
 					return crumbs.slice(0, existing + 1);
 				}
@@ -28,10 +30,10 @@ function createNavigationStore() {
 			});
 		},
 
-		/** Truncate the breadcrumb to the given collection ID (inclusive). */
-		popTo(id: number) {
+		/** Truncate the breadcrumb to the given path (inclusive). */
+		popTo(path: string) {
 			update((crumbs) => {
-				const idx = crumbs.findIndex((c) => c.id === id);
+				const idx = crumbs.findIndex((c) => c.path === path);
 				return idx >= 0 ? crumbs.slice(0, idx + 1) : crumbs;
 			});
 		},

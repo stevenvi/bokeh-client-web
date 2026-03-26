@@ -108,3 +108,66 @@ export interface AdminCollection {
 }
 
 export type ImageVariant = 'thumb' | 'small' | 'preview';
+
+// Music types
+export interface ArtistSummary {
+	id: number;
+	name: string;
+	sort_name: string;
+}
+
+export interface Artist {
+	id: number;
+	name: string;
+	sort_name: string;
+	manual_image: boolean;
+	created_at: string;
+}
+
+export interface AudioAlbum {
+	id: number;
+	name: string;
+	artist_id: number | null;
+	year: number | null;
+	genre: string | null;
+	root_collection_id: number;
+	manual_cover: boolean;
+	created_at: string;
+}
+
+export interface AlbumSummary {
+	album_id: number;
+	name: string;
+	year: number | null;
+	track_count: number;
+	total_duration: number;
+}
+
+export interface TrackView {
+	id: number;
+	title: string;
+	track_number: number | null;
+	disc_number: number | null;
+	duration_seconds: number | null;
+	artist_name: string | null;
+	mime_type: string;
+}
+
+export interface ArtistsPage {
+	artists: ArtistSummary[];
+	total_count: number;
+	page: number;
+	page_size: number;
+}
+
+export interface ArtistAlbumsResponse {
+	artist: Artist;
+	albums: AlbumSummary[];
+}
+
+export interface TracksResponse {
+	album: AudioAlbum;
+	tracks: TrackView[];
+	total_duration: number;
+	disc_count: number;
+}

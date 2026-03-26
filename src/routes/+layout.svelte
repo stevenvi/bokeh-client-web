@@ -12,6 +12,7 @@
 	import ServerSelectScreen from '$lib/components/ServerSelectScreen.svelte';
 	import LoginScreen from '$lib/components/LoginScreen.svelte';
 	import HamburgerMenu from '$lib/components/HamburgerMenu.svelte';
+	import MusicPlayer from '$lib/components/MusicPlayer.svelte';
 
 	let { children } = $props();
 
@@ -72,6 +73,9 @@
 			</div>
 		{/key}
 	{/if}
+
+	<!-- Music player persists across all routes -->
+	<MusicPlayer />
 
 	<!-- Network error banner is always rendered so it can intercept failures at any time -->
 	<NetworkErrorBanner />
