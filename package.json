@@ -1,7 +1,13 @@
 {
   "name": "bokeh-client-web",
   "version": "0.0.0",
-  "private": true,
+  "license": "AGPL-3.0",
+  "licenses": [
+    {
+      "type": "AGPL-3.0",
+      "url": "https://www.gnu.org/licenses/agpl-3.0.html"
+    }
+  ],
   "type": "module",
   "scripts": {
     "dev": "vite dev",
