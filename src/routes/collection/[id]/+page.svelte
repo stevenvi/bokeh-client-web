@@ -6,6 +6,8 @@
 	import { navigationStore } from '$lib/stores/navigation';
 	import PhotoAlbumView from '$lib/components/PhotoAlbumView.svelte';
 	import MusicCollectionView from '$lib/components/MusicCollectionView.svelte';
+	import MovieCollectionView from '$lib/components/MovieCollectionView.svelte';
+	import HomeMovieCollectionView from '$lib/components/HomeMovieCollectionView.svelte';
 	import UnsupportedCollectionView from '$lib/components/UnsupportedCollectionView.svelte';
 
 	const collectionId = $derived(Number(page.params.id));
@@ -62,6 +64,10 @@
 			<PhotoAlbumView collectionId={collectionId} collectionName={collection.name} parentCollectionId={collection.parent_collection_id} />
 		{:else if collection.type === 'audio:music' && collection.parent_collection_id == null}
 			<MusicCollectionView collectionId={collectionId} collectionName={collection.name} parentCollectionId={collection.parent_collection_id} />
+		{:else if collection.type === 'video:movie'}
+			<MovieCollectionView {collection} />
+		{:else if collection.type === 'video:home_movie'}
+			<HomeMovieCollectionView {collection} />
 		{:else}
 			<UnsupportedCollectionView collectionName={collection.name} collectionType={collection.type} />
 		{/if}

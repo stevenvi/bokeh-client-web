@@ -39,7 +39,7 @@
 	}
 
 	// Subscribe to get current value synchronously in derived
-	let currentCrumbs: { id: number; name: string }[] = $state([]);
+	let currentCrumbs: { id: number; name: string; path: string }[] = $state([]);
 	navigationStore.subscribe((v) => { currentCrumbs = v; });
 
 	// Breadcrumb display: Home + entries, with middle collapse

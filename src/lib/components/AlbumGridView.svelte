@@ -22,7 +22,7 @@
 	);
 
 	function openChild(id: number, name: string) {
-		navigationStore.push({ id, name });
+		navigationStore.push({ id, name, path: `/collection/${id}` });
 		goto(`/collection/${id}`);
 	}
 

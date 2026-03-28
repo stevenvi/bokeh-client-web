@@ -1,5 +1,6 @@
 <script lang="ts">
 	import { onMount } from 'svelte';
+	import PathBrowserNode from './PathBrowserNode.svelte';
 
 	type NodeState = {
 		children: string[] | 'error' | null; // null = loading
@@ -83,7 +84,7 @@
 	{#if isExpanded && Array.isArray(node?.children)}
 		<div class="border-l border-white/10" style="margin-left: {wrapperMargin}px">
 			{#each node.children as childName (childName)}
-				<svelte:self
+				<PathBrowserNode
 					path="{path}/{childName}"
 					name={childName}
 					depth={depth + 1}

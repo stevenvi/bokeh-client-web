@@ -3,7 +3,7 @@
 	import { goto } from '$app/navigation';
 	import { listArtists } from '$lib/api/music';
 	import { navigationStore } from '$lib/stores/navigation';
-	import { musicPlayerStore } from '$lib/stores/musicPlayer';
+	import { mediaPlayer } from '$lib/stores/mediaPlayer';
 	import ArtistTile from './ArtistTile.svelte';
 
 	interface Props {
@@ -44,7 +44,7 @@
 	);
 
 	// Infinite scroll observer
-	let sentinel: HTMLDivElement;
+	let sentinel: HTMLDivElement | undefined = $state();
 	$effect(() => {
 		if (!sentinel) return;
 		const observer = new IntersectionObserver(
@@ -77,7 +77,7 @@
 
 <svelte:window onkeydown={onKeyDown} />
 
-<div class="min-h-dvh" class:pb-24={$musicPlayerStore.visible}>
+<div class="min-h-dvh" class:pb-24={$mediaPlayer.visible}>
 	<!-- Search bar -->
 	<div class="px-4 pt-4">
 		<input

@@ -20,9 +20,12 @@
 	onmouseenter={() => (hovered = true)}
 	onmouseleave={() => (hovered = false)}
 >
-	<button
-		class="relative bg-surface-raised aspect-square w-full overflow-hidden rounded-lg transition-opacity"
+	<div
+		class="relative bg-surface-raised aspect-square w-full overflow-hidden rounded-lg transition-opacity cursor-pointer"
+		role="button"
+		tabindex="0"
 		onclick={onClickTitle}
+		onkeydown={(e) => e.key === 'Enter' && onClickTitle?.()}
 	>
 		{#if !coverError}
 			<img
@@ -56,7 +59,7 @@
 				</button>
 			</div>
 		{/if}
-	</button>
+	</div>
 	<button class="mt-2 w-full text-left hover:underline" onclick={onClickTitle}>
 		<p class="text-text-primary line-clamp-2 text-sm font-medium">{name}</p>
 	</button>

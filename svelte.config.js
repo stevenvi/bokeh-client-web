@@ -4,6 +4,10 @@ import { vitePreprocess } from '@sveltejs/vite-plugin-svelte';
 /** @type {import('@sveltejs/kit').Config} */
 const config = {
 	preprocess: vitePreprocess(),
+	onwarn(warning, defaultHandler) {
+		if (warning.code.startsWith('a11y_')) return;
+		defaultHandler(warning);
+	},
 	kit: {
 		adapter: adapter({
 			pages: 'build',

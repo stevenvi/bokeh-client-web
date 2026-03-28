@@ -30,10 +30,13 @@
 		collectionName = ''
 	}: Props = $props();
 
+	// svelte-ignore state_referenced_locally -- intentional initial-value fork; these props don't change after mount
 	let items = $state<SlideshowItem[]>([...initialItems]);
+	// svelte-ignore state_referenced_locally
 	let currentIndex = $state(startIndex);
 	let nextCursor = $state<string | null>(null);
 	let prevCursor = $state<string | null>(null);
+	// svelte-ignore state_referenced_locally
 	let playing = $state(autoplay);
 	let showOverlay = $state(true);
 	let detailCache = $state(new Map<number, MediaItemDetail>());

@@ -15,17 +15,11 @@
 	let { collectionId, collectionName, parentCollectionId }: Props = $props();
 
 	type ViewMode = 'album' | 'waterfall';
-	let mode = $state<ViewMode>(
-		(navigationStore.getViewMode(collectionId) as ViewMode) ?? 'album'
-	);
+	let mode = $state<ViewMode>('album');
 
-	// Reset mode when collection changes (not on initial mount)
-	let prevCollectionId = collectionId;
+	// Set mode from saved state on mount and reset when collection changes.
 	$effect(() => {
-		if (collectionId !== prevCollectionId) {
-			prevCollectionId = collectionId;
-			mode = 'album';
-		}
+		mode = (navigationStore.getViewMode(collectionId) as ViewMode) ?? 'album';
 	});
 
 	// Project view toolbar into the top bar via store

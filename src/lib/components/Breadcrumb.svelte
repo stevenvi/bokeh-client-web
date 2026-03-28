@@ -8,7 +8,7 @@
 	}
 
 	function goTo(id: number) {
-		navigationStore.popTo(id);
+		navigationStore.popTo(`/collection/${id}`);
 		goto(`/collection/${id}`);
 	}
 </script>

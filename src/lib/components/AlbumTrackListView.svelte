@@ -3,7 +3,7 @@
 	import { goto } from '$app/navigation';
 	import { listAlbumTracks, albumCoverUrl } from '$lib/api/music';
 	import { navigationStore } from '$lib/stores/navigation';
-	import { musicPlayerStore } from '$lib/stores/musicPlayer';
+	import { mediaPlayer } from '$lib/stores/mediaPlayer';
 	import type { TrackView } from '$lib/types';
 
 	interface Props {
@@ -66,7 +66,7 @@
 	function playTrack(trackIndex: number) {
 		const data = $tracksQuery.data;
 		if (!data) return;
-		musicPlayerStore.playAlbumFromTrack(albumId, albumName, data.tracks, trackIndex);
+		mediaPlayer.playAlbumFromTrack(albumId, albumName, data.tracks, trackIndex);
 	}
 
 	function onKeyDown(e: KeyboardEvent) {
@@ -78,7 +78,7 @@
 
 <svelte:window onkeydown={onKeyDown} />
 
-<div class="min-h-dvh" class:pb-24={$musicPlayerStore.visible}>
+<div class="min-h-dvh" class:pb-24={$mediaPlayer.visible}>
 	{#if $tracksQuery.isPending}
 		<div class="flex h-48 items-center justify-center">
 			<div class="border-accent h-8 w-8 animate-spin rounded-full border-2 border-t-transparent"></div>

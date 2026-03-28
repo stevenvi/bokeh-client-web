@@ -31,12 +31,28 @@ export interface PhotoMetadata {
 	variants_generated_at: string | null;
 }
 
+export interface VideoMetadata {
+	duration_seconds?: number;
+	width?: number;
+	height?: number;
+	bitrate_kbps?: number;
+	video_codec?: string;
+	audio_codec?: string;
+	transcoded_at?: string;
+	date?: string;
+	end_date?: string;
+	author?: string;
+	manual_cover: boolean;
+	bookmark_seconds?: number;
+}
+
 export interface MediaItemView {
 	id: number;
 	title: string;
 	mime_type: string;
 	ordinal: number | null;
 	photo: PhotoMetadata | null;
+	video: VideoMetadata | null;
 }
 
 export interface MediaItemDetail extends MediaItemView {

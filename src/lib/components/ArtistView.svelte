@@ -4,7 +4,7 @@
 	import { listArtistAlbums } from '$lib/api/music';
 	import { artistImageUrl } from '$lib/api/music';
 	import { navigationStore } from '$lib/stores/navigation';
-	import { musicPlayerStore } from '$lib/stores/musicPlayer';
+	import { mediaPlayer } from '$lib/stores/mediaPlayer';
 	import AlbumTile from './AlbumTile.svelte';
 
 	interface Props {
@@ -40,7 +40,7 @@
 	}
 
 	function playAlbum(albumId: number) {
-		musicPlayerStore.playAlbum(rootCollectionId, albumId);
+		mediaPlayer.playAlbum(rootCollectionId, albumId);
 	}
 
 	function onKeyDown(e: KeyboardEvent) {
@@ -52,7 +52,7 @@
 
 <svelte:window onkeydown={onKeyDown} />
 
-<div class="min-h-dvh" class:pb-24={$musicPlayerStore.visible}>
+<div class="min-h-dvh" class:pb-24={$mediaPlayer.visible}>
 	{#if $albumsQuery.isPending}
 		<div class="flex h-48 items-center justify-center">
 			<div class="border-accent h-8 w-8 animate-spin rounded-full border-2 border-t-transparent"></div>
