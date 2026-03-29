@@ -38,7 +38,7 @@
 	let prevCursor = $state<string | null>(null);
 	// svelte-ignore state_referenced_locally
 	let playing = $state(autoplay);
-	let showOverlay = $state(true);
+	let showOverlay = $state(false);
 	let detailCache = $state(new Map<number, MediaItemDetail>());
 	let loadingPrev = $state(false);
 
@@ -53,7 +53,9 @@
 	let swipeCurrentX = $state(0);
 	let swiping = $state(false);
 
+
 	let zoomed = $state(false);
+	let justExitedZoom = $state(false);
 	let overlayHideTimer: ReturnType<typeof setTimeout> | null = null;
 	let playTimer: ReturnType<typeof setInterval> | null = null;
 
@@ -92,7 +94,6 @@
 		if (items.length === 0) {
 			await loadInitial();
 		}
-		scheduleOverlayHide();
 	});
 
 	onDestroy(() => {
@@ -218,9 +219,27 @@
 		scheduleOverlayHide();
 	}
 
+	function handleTap() {
+		if (zoomed || justExitedZoom) return;
+		handleTogglePlay();
+		showOverlay = true;
+		scheduleOverlayHide();
+	}
+
+	function handleZoomExit() {
+		zoomed = false;
+		// Show the overlay briefly on zoom exit so the user regains orientation
+		showOverlay = true;
+		scheduleOverlayHide();
+		// Suppress the tap-to-play action for a short window after zoom exit so
+		// the touch that triggered the exit doesn't immediately toggle play.
+		justExitedZoom = true;
+		setTimeout(() => { justExitedZoom = false; }, 350);
+	}
+
 	// Swipe handling
 	function onTouchStart(e: TouchEvent) {
-		if (e.touches.length !== 1 || transitioning) return;
+		if (e.touches.length !== 1 || transitioning || zoomed) return;
 		swipeStartX = e.touches[0].clientX;
 		swipeCurrentX = 0;
 		swiping = true;
@@ -299,7 +318,7 @@
 <!-- svelte-ignore a11y_no_static_element_interactions -->
 <div
 	class="fixed inset-0 z-50 overflow-hidden bg-black"
-	onclick={handleInteraction}
+	onclick={handleTap}
 	onmousemove={handleInteraction}
 	ontouchstart={onTouchStart}
 	ontouchmove={onTouchMove}
@@ -335,7 +354,7 @@
 					active={true}
 					{zoomed}
 					onZoom={() => zoomed = true}
-					onZoomExit={() => zoomed = false}
+					onZoomExit={handleZoomExit}
 				/>
 			</div>
 
@@ -375,12 +394,10 @@
 				item={currentItem}
 				detail={detailCache.get(currentItem.id) ?? null}
 				{collectionName}
-				{playing}
 				{hasPrev}
 				{hasNext}
 				onPrev={handlePrev}
 				onNext={handleNext}
-				onTogglePlay={handleTogglePlay}
 				onBack={handleBack}
 			/>
 		{/if}

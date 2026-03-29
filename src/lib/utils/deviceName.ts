@@ -39,16 +39,31 @@ export function deriveDeviceName(): string {
 }
 
 /**
+ * Generate a UUID v4, falling back to Math.random() outside secure contexts
+ * where crypto.randomUUID() is unavailable.
+ */
+function generateUUID(): string {
+	if (typeof crypto !== 'undefined' && typeof crypto.randomUUID === 'function') {
+		return crypto.randomUUID();
+	}
+	// Fallback for non-secure contexts (HTTP on LAN)
+	return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, (c) => {
+		const r = (Math.random() * 16) | 0;
+		return (c === 'x' ? r : (r & 0x3) | 0x8).toString(16);
+	});
+}
+
+/**
  * Get or generate a persistent device UUID stored in localStorage.
  * The UUID identifies this browser installation uniquely.
  */
 export function getOrCreateDeviceUUID(): string {
 	const KEY = 'bokeh_device_uuid';
-	if (typeof localStorage === 'undefined') return crypto.randomUUID();
+	if (typeof localStorage === 'undefined') return generateUUID();
 
 	let uuid = localStorage.getItem(KEY);
 	if (!uuid) {
-		uuid = crypto.randomUUID();
+		uuid = generateUUID();
 		localStorage.setItem(KEY, uuid);
 	}
 	return uuid;

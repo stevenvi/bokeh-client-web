@@ -64,8 +64,21 @@
 	let newCollName = $state('');
 	let newCollPath = $state('');
 	let newCollType = $state('image:photo');
+	let typeDropdownOpen = $state(false);
 	let createCollError = $state('');
 	let createCollLoading = $state(false);
+
+	const collectionTypes = [
+		{ value: 'image:photo', label: 'Photo Album' },
+		{ value: 'video:movie', label: 'Movie Library' },
+		{ value: 'video:home_movie', label: 'Home Movies' },
+		{ value: 'audio:music', label: 'Music Library' },
+		{ value: 'audio:radio', label: 'Radio Library' }
+	] as const;
+
+	function collTypeLabel(val: string) {
+		return collectionTypes.find((t) => t.value === val)?.label ?? val;
+	}
 
 	$effect(() => {
 		if (newCollPath) {
@@ -370,6 +383,51 @@
 	</section>
 </main>
 
+{#snippet typeIcon(type: string)}
+	{#if type === 'image:photo'}
+		<!-- Landscape photograph -->
+		<svg class="h-4 w-4 flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round">
+			<rect x="2" y="3" width="20" height="18" rx="2"/>
+			<circle cx="8.5" cy="9.5" r="1.5"/>
+			<path d="M3 17 l4-4 3 3 4-4.5 7 5.5"/>
+		</svg>
+	{:else if type === 'video:movie'}
+		<!-- Clapperboard -->
+		<svg class="h-4 w-4 flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round">
+			<rect x="3" y="4" width="18" height="4" rx="1"/>
+			<rect x="3" y="8" width="18" height="12" rx="1"/>
+			<line x1="7" y1="4" x2="6" y2="8"/>
+			<line x1="12" y1="4" x2="11" y2="8"/>
+			<line x1="17" y1="4" x2="16" y2="8"/>
+		</svg>
+	{:else if type === 'video:home_movie'}
+		<!-- Film reel -->
+		<svg class="h-4 w-4 flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round">
+			<circle cx="12" cy="12" r="9"/>
+			<circle cx="12" cy="12" r="3"/>
+			<line x1="12" y1="3" x2="12" y2="9"/>
+			<line x1="12" y1="15" x2="12" y2="21"/>
+			<line x1="3" y1="12" x2="9" y2="12"/>
+			<line x1="15" y1="12" x2="21" y2="12"/>
+		</svg>
+	{:else if type === 'audio:music'}
+		<!-- Music notes -->
+		<svg class="h-4 w-4 flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round">
+			<path d="M9 18V5l12-2v13"/>
+			<circle cx="6" cy="18" r="3"/>
+			<circle cx="18" cy="16" r="3"/>
+		</svg>
+	{:else if type === 'audio:radio'}
+		<!-- Radio tower with signal arcs -->
+		<svg class="h-4 w-4 flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round">
+			<line x1="12" y1="2" x2="12" y2="13"/>
+			<path d="M9 22 L12 13 L15 22"/>
+			<path d="M8.5 9 Q12 5.5 15.5 9"/>
+			<path d="M5.5 6.5 Q12 1 18.5 6.5"/>
+		</svg>
+	{/if}
+{/snippet}
+
 <!-- Create Collection Popup -->
 {#if showCreateCollection}
 	<div class="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4">
@@ -390,15 +448,35 @@
 					/>
 				</div>
 				<div>
-					<label for="coll-type" class="text-text-secondary mb-1 block text-sm">Type</label>
-					<select
-						id="coll-type"
-						bind:value={newCollType}
-						class="bg-surface-raised border-border text-text-primary w-full rounded-lg border px-3 py-2 focus:border-accent focus:outline-none"
-					>
-						<option value="image:photo">Photo Album</option>
-						<option value="audio:music">Music Library</option>
-					</select>
+					<label class="text-text-secondary mb-1 block text-sm">Type</label>
+					<div class="relative">
+						<button
+							type="button"
+							onclick={() => (typeDropdownOpen = !typeDropdownOpen)}
+							class="bg-surface-raised border-border text-text-primary flex w-full items-center gap-2 rounded-lg border px-3 py-2 text-left focus:border-accent focus:outline-none"
+						>
+							{@render typeIcon(newCollType)}
+							<span class="flex-1 text-sm">{collTypeLabel(newCollType)}</span>
+							<svg class="text-text-muted h-4 w-4 flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+								<path d="M19.5 8.25l-7.5 7.5-7.5-7.5" />
+							</svg>
+						</button>
+						{#if typeDropdownOpen}
+							<div class="fixed inset-0 z-[9]" onclick={() => (typeDropdownOpen = false)}></div>
+							<div class="bg-surface border-border absolute left-0 right-0 top-full z-10 mt-1 overflow-hidden rounded-lg border shadow-lg">
+								{#each collectionTypes as ct}
+									<button
+										type="button"
+										onclick={() => { newCollType = ct.value; typeDropdownOpen = false; }}
+										class="flex w-full items-center gap-2 px-3 py-2.5 text-sm transition-colors hover:bg-surface-raised {newCollType === ct.value ? 'bg-surface-raised text-text-primary' : 'text-text-secondary'}"
+									>
+										{@render typeIcon(ct.value)}
+										{ct.label}
+									</button>
+								{/each}
+							</div>
+						{/if}
+					</div>
 				</div>
 				{#if createCollError}
 					<p class="text-error text-sm">{createCollError}</p>

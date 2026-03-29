@@ -9,7 +9,13 @@
 
 	let open = $state(false);
 	const isHome = $derived(page.url.pathname === '/');
-	const isAdmin = $derived(page.url.pathname === '/admin');
+
+	// Label for known static routes not driven by the navigation store
+	const staticPageTitle = $derived(
+		page.url.pathname === '/admin' ? 'Admin Dashboard' :
+		page.url.pathname === '/profile' ? 'Profile' :
+		null
+	);
 
 	function close() { open = false; }
 
@@ -47,7 +53,12 @@
 	// If >2 middle entries, collapse them to "..."
 	const breadcrumbSegments = $derived(() => {
 		const crumbs = currentCrumbs;
-		if (crumbs.length === 0) return [];
+		if (crumbs.length === 0) {
+			// Static page (admin, profile, etc.) — show its title as the leaf
+			return staticPageTitle
+				? [{ type: 'entry' as const, path: page.url.pathname, name: staticPageTitle, isLeaf: true }]
+				: [];
+		}
 		if (crumbs.length <= 3) {
 			// Show all: each entry gets its own segment
 			return crumbs.map((c, i) => ({
@@ -70,7 +81,7 @@
 	const leafName = $derived(
 		currentCrumbs.length > 0
 			? currentCrumbs[currentCrumbs.length - 1].name
-			: ''
+			: (staticPageTitle ?? '')
 	);
 
 	async function handleSignOut() {
@@ -90,74 +101,58 @@
 
 <!-- Top bar -->
 <nav class="bg-bg/90 sticky top-0 z-20 flex items-center gap-2 px-3 py-2 backdrop-blur-sm" aria-label="Top bar">
-	{#if isAdmin}
-		<!-- Admin page: back button + "Admin Dashboard" heading -->
+	<!-- Mobile: back button + title -->
+	{#if !isHome}
 		<button
 			class="text-text-muted hover:text-text-primary md:hidden"
-			onclick={() => history.back()}
+			onclick={goBack}
 			aria-label="Go back"
 		>
 			<svg class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
 				<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15.75 19.5L8.25 12l7.5-7.5" />
 			</svg>
 		</button>
-		<span class="text-text-primary min-w-0 flex-1 truncate text-sm font-semibold">
-			Admin Dashboard
+		<span class="text-text-primary min-w-0 flex-1 truncate text-sm font-medium md:hidden">
+			{leafName}
 		</span>
 	{:else}
-		<!-- Mobile: back button + leaf name -->
-		{#if !isHome}
-			<button
-				class="text-text-muted hover:text-text-primary md:hidden"
-				onclick={goBack}
-				aria-label="Go back"
-			>
-				<svg class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-					<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15.75 19.5L8.25 12l7.5-7.5" />
-				</svg>
-			</button>
-			<span class="text-text-primary min-w-0 flex-1 truncate text-sm font-medium md:hidden">
-				{leafName}
-			</span>
-		{:else}
-			<span class="text-text-primary min-w-0 flex-1 truncate text-sm font-medium md:hidden">
-				Your Library
-			</span>
-		{/if}
-
-		<!-- Desktop: breadcrumb -->
-		<div class="hidden min-w-0 flex-1 items-center gap-1 md:flex" aria-label="Breadcrumb">
-			<button
-				class="text-text-muted hover:text-text-primary flex flex-shrink-0 items-center gap-1 text-sm transition-colors"
-				onclick={goHome}
-			>
-				<svg class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-					<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M2.25 12l8.954-8.955c.44-.439 1.152-.439 1.591 0L21.75 12M4.5 9.75v10.125c0 .621.504 1.125 1.125 1.125H9.75v-4.875c0-.621.504-1.125 1.125-1.125h2.25c.621 0 1.125.504 1.125 1.125V21h4.125c.621 0 1.125-.504 1.125-1.125V9.75M8.25 21h8.25" />
-				</svg>
-				Home
-			</button>
-
-			{#each breadcrumbSegments() as seg (seg.type === 'ellipsis' ? 'ellipsis' : seg.path)}
-				<svg class="text-text-muted h-4 w-4 flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-					<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8.25 4.5l7.5 7.5-7.5 7.5" />
-				</svg>
-				{#if seg.type === 'ellipsis'}
-					<span class="text-text-muted text-sm">...</span>
-				{:else if seg.isLeaf}
-					<span class="text-text-primary min-w-0 truncate text-sm font-medium">
-						{seg.name}
-					</span>
-				{:else}
-					<button
-						class="text-text-secondary hover:text-text-primary max-w-[24rem] flex-shrink-0 truncate text-sm transition-colors"
-						onclick={() => goTo(seg.path)}
-					>
-						{seg.name}
-					</button>
-				{/if}
-			{/each}
-		</div>
+		<span class="text-text-primary min-w-0 flex-1 truncate text-sm font-medium md:hidden">
+			Your Library
+		</span>
 	{/if}
+
+	<!-- Desktop: breadcrumb -->
+	<div class="hidden min-w-0 flex-1 items-center gap-1 md:flex" aria-label="Breadcrumb">
+		<button
+			class="text-text-muted hover:text-text-primary flex flex-shrink-0 items-center gap-1 text-sm transition-colors"
+			onclick={goHome}
+		>
+			<svg class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+				<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M2.25 12l8.954-8.955c.44-.439 1.152-.439 1.591 0L21.75 12M4.5 9.75v10.125c0 .621.504 1.125 1.125 1.125H9.75v-4.875c0-.621.504-1.125 1.125-1.125h2.25c.621 0 1.125.504 1.125 1.125V21h4.125c.621 0 1.125-.504 1.125-1.125V9.75M8.25 21h8.25" />
+			</svg>
+			Home
+		</button>
+
+		{#each breadcrumbSegments() as seg (seg.type === 'ellipsis' ? 'ellipsis' : seg.path)}
+			<svg class="text-text-muted h-4 w-4 flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+				<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8.25 4.5l7.5 7.5-7.5 7.5" />
+			</svg>
+			{#if seg.type === 'ellipsis'}
+				<span class="text-text-muted text-sm">...</span>
+			{:else if seg.isLeaf}
+				<span class="text-text-primary min-w-0 truncate text-sm font-medium">
+					{seg.name}
+				</span>
+			{:else}
+				<button
+					class="text-text-secondary hover:text-text-primary max-w-[24rem] flex-shrink-0 truncate text-sm transition-colors"
+					onclick={() => goTo(seg.path)}
+				>
+					{seg.name}
+				</button>
+			{/if}
+		{/each}
+	</div>
 
 	<!-- Content-specific toolbar (e.g. album/waterfall/slideshow) -->
 	{#if $toolbarStore}

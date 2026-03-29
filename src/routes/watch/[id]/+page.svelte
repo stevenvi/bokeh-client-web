@@ -1,6 +1,7 @@
 <script lang="ts">
-	import { onDestroy } from 'svelte';
+	import { onMount, onDestroy } from 'svelte';
 	import { page } from '$app/state';
+	import { goto } from '$app/navigation';
 	import { createQuery } from '@tanstack/svelte-query';
 	import { getMediaItem } from '$lib/api/media';
 	import { getCollection } from '$lib/api/collections';
@@ -58,10 +59,33 @@
 		mediaPlayer.setIsFullPlayer(true);
 	});
 
+	function goToCollection() {
+		// Prefer the store's collectionId — available immediately when video is already playing.
+		// Fall back to the query-derived value for direct URL loads.
+		const id = $mediaPlayer.collectionId ?? collectionId;
+		if (id != null) goto(`/collection/${id}`);
+	}
+
+	function onKeyDown(e: KeyboardEvent) {
+		if (e.key === 'Escape') goToCollection();
+	}
+
+	function onFullscreenChange() {
+		// When the browser exits fullscreen (e.g. user pressed Escape), navigate back.
+		if (!document.fullscreenElement) goToCollection();
+	}
+
+	onMount(() => {
+		document.addEventListener('fullscreenchange', onFullscreenChange);
+	});
+
 	onDestroy(() => {
+		document.removeEventListener('fullscreenchange', onFullscreenChange);
 		mediaPlayer.setIsFullPlayer(false);
 	});
 </script>
+
+<svelte:window onkeydown={onKeyDown} />
 
 <svelte:head>
 	<title>{$mediaPlayer.title || $itemQuery.data?.title || 'Watch'} — Bokeh</title>

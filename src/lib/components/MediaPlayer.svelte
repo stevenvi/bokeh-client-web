@@ -1,17 +1,37 @@
 <script lang="ts">
 	import { onMount } from 'svelte';
 	import { beforeNavigate, goto } from '$app/navigation';
+	import { useQueryClient } from '@tanstack/svelte-query';
 	import { mediaPlayer } from '$lib/stores/mediaPlayer';
 	import { setBookmark, clearBookmark } from '$lib/api/video';
+	import type { MediaItemDetail } from '$lib/types';
+	import type { ItemsPage } from '$lib/api/collections';
+
+	const queryClient = useQueryClient();
 
 	let audioEl: HTMLAudioElement;
 	let videoEl: HTMLVideoElement;
+
+	function onVideoPause() {
+		if (ps.type !== 'video' || ps.itemId == null || !videoEl || videoEl.ended) return;
+		const pos = Math.floor(videoEl.currentTime);
+		if (pos <= 0) return;
+		setBookmark(ps.itemId, pos).catch(() => {});
+		updateLocalBookmark(ps.itemId, pos);
+	}
 
 	onMount(() => {
 		mediaPlayer.setElements(audioEl, videoEl);
 
 		document.addEventListener('fullscreenchange', onFullscreenChange);
-		return () => document.removeEventListener('fullscreenchange', onFullscreenChange);
+		// iOS Safari fires these on the video element instead of document
+		videoEl.addEventListener('webkitbeginfullscreen', () => { isBrowserFullscreen = true; });
+		videoEl.addEventListener('webkitendfullscreen', () => { isBrowserFullscreen = false; });
+		videoEl.addEventListener('pause', onVideoPause);
+		return () => {
+			document.removeEventListener('fullscreenchange', onFullscreenChange);
+			videoEl.removeEventListener('pause', onVideoPause);
+		};
 	});
 
 	const ps = $derived($mediaPlayer);
@@ -65,8 +85,51 @@
 		}
 	});
 
+	// ── Video loading state ──
+	let videoLoading = $state(false);
+	let lastVideoItemId: number | null = null;
+
+	$effect(() => {
+		const id = ps.type === 'video' ? ps.itemId : null;
+		if (id != null && id !== lastVideoItemId) {
+			lastVideoItemId = id;
+			videoLoading = true;
+		}
+	});
+
+	function onVideoPlaying() {
+		videoLoading = false;
+	}
+
+	function onVideoWaiting() {
+		videoLoading = true;
+	}
+
 	// ── Video bookmark sync ──
 	let lastBookmarkSecond = -1;
+
+	function updateLocalBookmark(itemId: number, positionSeconds: number) {
+		queryClient.setQueryData(['media', itemId], (old: MediaItemDetail | undefined) => {
+			if (!old?.video) return old;
+			return { ...old, video: { ...old.video, bookmark_seconds: positionSeconds } };
+		});
+
+		const collId = $mediaPlayer.collectionId;
+		if (collId == null) return;
+		const patchItems = (old: ItemsPage | undefined): ItemsPage | undefined => {
+			if (!old) return old;
+			return {
+				...old,
+				items: old.items.map((item) =>
+					item.id === itemId && item.video
+						? { ...item, video: { ...item.video, bookmark_seconds: positionSeconds } }
+						: item
+				)
+			};
+		};
+		queryClient.setQueryData(['collection', collId, 'items'], patchItems);
+		queryClient.setQueryData(['collection', collId, 'items', 'local'], patchItems);
+	}
 
 	function onVideoTimeUpdate() {
 		if (!videoEl || ps.type !== 'video') return;
@@ -77,8 +140,27 @@
 			lastBookmarkSecond = floor;
 			if (ps.itemId != null) {
 				setBookmark(ps.itemId, floor).catch(() => {});
+				updateLocalBookmark(ps.itemId, floor);
 			}
 		}
+	}
+
+	function onVideoSeeked() {
+		if (!videoEl || ps.type !== 'video' || ps.itemId == null) return;
+		const pos = Math.floor(videoEl.currentTime);
+		if (pos <= 0) return;
+		setBookmark(ps.itemId, pos).catch(() => {});
+		updateLocalBookmark(ps.itemId, pos);
+	}
+
+	function onVideoEnded() {
+		const s = $mediaPlayer;
+		if (s.type !== 'video' || s.itemId == null) return;
+		clearBookmark(s.itemId).catch(() => {});
+		updateLocalBookmark(s.itemId, 0);
+		const destId = s.collectionId;
+		mediaPlayer.close();
+		if (destId != null) goto(`/collection/${destId}`);
 	}
 
 	function saveVideoBookmark() {
@@ -88,16 +170,20 @@
 		const duration = videoEl.duration;
 		if (currentTime <= 0) return;
 
+		const pos = Math.floor(currentTime);
 		if (s.collectionType === 'video:movie') {
 			if (isFinite(duration) && duration - currentTime < 300) {
 				clearBookmark(s.itemId).catch(() => {});
+				updateLocalBookmark(s.itemId, 0);
 			} else {
-				setBookmark(s.itemId, Math.floor(currentTime)).catch(() => {});
+				setBookmark(s.itemId, pos).catch(() => {});
+				updateLocalBookmark(s.itemId, pos);
 			}
 		} else {
 			// home movie: no "complete" clear — only save if not at the very end
 			if (!isFinite(duration) || currentTime < duration - 1) {
-				setBookmark(s.itemId, Math.floor(currentTime)).catch(() => {});
+				setBookmark(s.itemId, pos).catch(() => {});
+				updateLocalBookmark(s.itemId, pos);
 			}
 		}
 	}
@@ -134,9 +220,16 @@
 
 	async function requestFullscreen() {
 		try {
-			await document.documentElement.requestFullscreen();
 			// eslint-disable-next-line @typescript-eslint/no-explicit-any
-		(screen.orientation as any).lock?.('landscape')?.catch(() => {});
+			if ((videoEl as any).webkitEnterFullscreen) {
+				// iOS Safari: must fullscreen the video element directly
+				// eslint-disable-next-line @typescript-eslint/no-explicit-any
+				(videoEl as any).webkitEnterFullscreen();
+			} else {
+				await document.documentElement.requestFullscreen();
+				// eslint-disable-next-line @typescript-eslint/no-explicit-any
+				(screen.orientation as any).lock?.('landscape')?.catch(() => {});
+			}
 		} catch {
 			// ignore
 		}
@@ -144,7 +237,13 @@
 
 	async function exitFullscreen() {
 		try {
-			await document.exitFullscreen();
+			// eslint-disable-next-line @typescript-eslint/no-explicit-any
+			if ((videoEl as any).webkitExitFullscreen) {
+				// eslint-disable-next-line @typescript-eslint/no-explicit-any
+				(videoEl as any).webkitExitFullscreen();
+			} else {
+				await document.exitFullscreen();
+			}
 		} catch {
 			// ignore
 		}
@@ -178,14 +277,38 @@
 	class={videoClasses}
 	playsinline
 	ontimeupdate={onVideoTimeUpdate}
+	onplaying={onVideoPlaying}
+	onwaiting={onVideoWaiting}
+	onseeked={onVideoSeeked}
+	onended={onVideoEnded}
 ></video>
+
+<!-- Video loading spinner (full player) -->
+{#if ps.type === 'video' && ps.visible && ps.isFullPlayer && videoLoading}
+	<div class="fixed inset-0 z-[50] flex items-center justify-center pointer-events-none">
+		<svg class="h-14 w-14 animate-spin text-white/80" fill="none" viewBox="0 0 24 24">
+			<circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="3"></circle>
+			<path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"></path>
+		</svg>
+	</div>
+{/if}
+
+<!-- Video loading spinner (mini player thumbnail) -->
+{#if ps.type === 'video' && showMiniPlayer && videoLoading}
+	<div class="fixed bottom-0 left-0 h-[72px] aspect-video z-[52] flex items-center justify-center bg-black/40">
+		<svg class="h-6 w-6 animate-spin text-white/80" fill="none" viewBox="0 0 24 24">
+			<circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="3"></circle>
+			<path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"></path>
+		</svg>
+	</div>
+{/if}
 
 <!-- Full player controls overlay -->
 {#if showFullPlayer}
 	<!-- svelte-ignore a11y_click_events_have_key_events -->
 	<!-- svelte-ignore a11y_no_static_element_interactions -->
 	<div
-		class="fixed inset-0 z-[49] flex flex-col justify-between"
+		class="fixed inset-0 z-[49] flex flex-col"
 		onmousemove={showControls}
 		ontouchstart={showControls}
 		onclick={showControls}
@@ -211,25 +334,10 @@
 
 		<!-- Bottom controls bar -->
 		<div
-			class="pointer-events-auto bg-gradient-to-t from-black/80 to-transparent px-4 py-4 transition-opacity duration-300"
+			class="pointer-events-auto mt-auto bg-gradient-to-t from-black/80 to-transparent px-4 py-4 transition-opacity duration-300"
 			class:opacity-0={!controlsVisible}
 			class:pointer-events-none={!controlsVisible}
 		>
-			<!-- Time + scrubber -->
-			<div class="mb-3 flex items-center gap-3">
-				<span class="text-white/80 text-xs tabular-nums w-10 text-right">{formatTime(ps.currentTime)}</span>
-				<!-- svelte-ignore a11y_click_events_have_key_events -->
-				<!-- svelte-ignore a11y_no_static_element_interactions -->
-				<div
-					class="flex-1 h-1 bg-white/30 rounded-full cursor-pointer relative"
-					onclick={handleSeekClick}
-					ontouchmove={handleSeekTouch}
-				>
-					<div class="absolute inset-y-0 left-0 bg-white rounded-full" style="width: {progress}%"></div>
-				</div>
-				<span class="text-white/80 text-xs tabular-nums w-10">{formatTime(ps.duration)}</span>
-			</div>
-
 			<!-- Controls row -->
 			<div class="flex items-center justify-between">
 				<div class="flex items-center gap-2">
@@ -283,6 +391,21 @@
 						{/if}
 					</button>
 				</div>
+			</div>
+
+			<!-- Time + scrubber -->
+			<div class="mt-3 flex items-center gap-3">
+				<span class="text-white/80 text-xs tabular-nums w-10 text-right">{formatTime(ps.currentTime)}</span>
+				<!-- svelte-ignore a11y_click_events_have_key_events -->
+				<!-- svelte-ignore a11y_no_static_element_interactions -->
+				<div
+					class="flex-1 h-1 bg-white/30 rounded-full cursor-pointer relative"
+					onclick={handleSeekClick}
+					ontouchmove={handleSeekTouch}
+				>
+					<div class="absolute inset-y-0 left-0 bg-white rounded-full" style="width: {progress}%"></div>
+				</div>
+				<span class="text-white/80 text-xs tabular-nums w-10">{formatTime(ps.duration)}</span>
 			</div>
 		</div>
 	</div>

@@ -93,7 +93,7 @@
 				maxZoomPixelRatio: 4,
 				gestureSettingsMouse: { clickToZoom: false },
 				// eslint-disable-next-line @typescript-eslint/no-explicit-any
-				gestureSettingsTouch: { dblTapToZoom: true, pinchToZoom: true } as any
+				gestureSettingsTouch: { dblTapToZoom: false, pinchToZoom: true } as any
 			});
 
 			// Auto-exit DZI when the user zooms all the way back to the home (fit) level.
@@ -155,9 +155,12 @@
 		}, 50);
 	}
 
-	// Touch pinch detection
+	// Touch gesture detection (pinch to enter zoom, double-tap to enter/exit zoom)
 	let touches: Touch[] = [];
 	let initialPinchDist = 0;
+	let lastTapTime = 0;
+	let lastTapX = 0;
+	let lastTapY = 0;
 
 	function onTouchStart(e: TouchEvent) {
 		touches = Array.from(e.touches);
@@ -182,6 +185,27 @@
 			}
 		}
 	}
+
+	function onTouchEnd(e: TouchEvent) {
+		// Only act on single-finger lifts that end all touches
+		if (e.changedTouches.length !== 1 || e.touches.length !== 0) return;
+		const touch = e.changedTouches[0];
+		const now = Date.now();
+		const dist = Math.hypot(touch.clientX - lastTapX, touch.clientY - lastTapY);
+		if (now - lastTapTime < 300 && dist < 50) {
+			// Double tap: enter zoom if not showing, exit if showing
+			if (showDzi) {
+				exitDzi();
+			} else {
+				initDzi();
+			}
+			lastTapTime = 0; // reset so triple-tap doesn't re-trigger
+		} else {
+			lastTapTime = now;
+			lastTapX = touch.clientX;
+			lastTapY = touch.clientY;
+		}
+	}
 </script>
 
 <!-- svelte-ignore a11y_no_static_element_interactions -->
@@ -191,6 +215,7 @@
 	onwheel={handleWheel}
 	ontouchstart={onTouchStart}
 	ontouchmove={onTouchMove}
+	ontouchend={onTouchEnd}
 	role="presentation"
 >
 	<!-- Placeholder blur -->

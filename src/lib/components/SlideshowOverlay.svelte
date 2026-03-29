@@ -6,12 +6,10 @@
 		item: SlideshowItem;
 		detail: MediaItemDetail | null;
 		collectionName: string;
-		playing: boolean;
 		hasPrev: boolean;
 		hasNext: boolean;
 		onPrev: () => void;
 		onNext: () => void;
-		onTogglePlay: () => void;
 		onBack: () => void;
 	}
 
@@ -19,12 +17,10 @@
 		item,
 		detail,
 		collectionName,
-		playing,
 		hasPrev,
 		hasNext,
 		onPrev,
 		onNext,
-		onTogglePlay,
 		onBack
 	}: Props = $props();
 
@@ -94,22 +90,6 @@
 			<div class="p-3"></div>
 		{/if}
 
-		<button
-			class="bg-black/30 hover:bg-black/50 rounded-full p-3 text-white"
-			onclick={onTogglePlay}
-			aria-label={playing ? 'Pause' : 'Play'}
-		>
-			{#if playing}
-				<svg class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-					<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15.75 5.25v13.5m-7.5-13.5v13.5" />
-				</svg>
-			{:else}
-				<svg class="h-6 w-6" fill="currentColor" viewBox="0 0 24 24">
-					<path d="M8 5v14l11-7z" />
-				</svg>
-			{/if}
-		</button>
-
 		{#if hasNext}
 			<button
 				class="bg-black/30 hover:bg-black/50 rounded-full p-3 text-white"
@@ -166,22 +146,6 @@
 		{:else}
 			<div class="p-4"></div>
 		{/if}
-
-		<button
-			class="bg-black/30 rounded-full p-4 text-white active:bg-black/60"
-			onclick={onTogglePlay}
-			aria-label={playing ? 'Pause' : 'Play'}
-		>
-			{#if playing}
-				<svg class="h-7 w-7" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-					<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15.75 5.25v13.5m-7.5-13.5v13.5" />
-				</svg>
-			{:else}
-				<svg class="h-7 w-7" fill="currentColor" viewBox="0 0 24 24">
-					<path d="M8 5v14l11-7z" />
-				</svg>
-			{/if}
-		</button>
 
 		{#if hasNext}
 			<button

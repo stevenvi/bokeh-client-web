@@ -141,16 +141,36 @@ function createMediaPlayerStore() {
 		audioEl.onerror = () => {
 			if (get({ subscribe }).type === 'audio') next();
 		};
+		audioEl.onplay = () => {
+			if ('mediaSession' in navigator) navigator.mediaSession.playbackState = 'playing';
+		};
+		audioEl.onpause = () => {
+			if ('mediaSession' in navigator) navigator.mediaSession.playbackState = 'paused';
+		};
 	}
 
 	function setupMediaSession(track: AudioQueueItem) {
 		if (!('mediaSession' in navigator)) return;
+
+		// Set title/artist/album immediately so lock screen text appears right away.
 		navigator.mediaSession.metadata = new MediaMetadata({
 			title: track.title,
 			artist: track.artistName ?? '',
 			album: track.albumName,
-			artwork: [{ src: albumCoverUrl(track.albumId), sizes: '400x400' }]
+			artwork: []
 		});
+
+		// iOS requires playbackState = 'playing' before it renders metadata on the lock screen.
+		navigator.mediaSession.playbackState = 'playing';
+
+		if (track.durationSeconds) {
+			navigator.mediaSession.setPositionState({
+				duration: track.durationSeconds,
+				playbackRate: 1,
+				position: 0
+			});
+		}
+
 		navigator.mediaSession.setActionHandler('play', () => play());
 		navigator.mediaSession.setActionHandler('pause', () => pause());
 		navigator.mediaSession.setActionHandler('previoustrack', () => previous());
@@ -158,6 +178,34 @@ function createMediaPlayerStore() {
 		navigator.mediaSession.setActionHandler('seekto', (d) => {
 			if (d.seekTime != null) seekTo(d.seekTime);
 		});
+
+		// Fetch artwork with auth credentials. Convert to a base64 data URL so the
+		// OS can render it on the lock screen without needing to make a credentialed
+		// request itself (blob: URLs are not accessible outside the browser process).
+		const trackId = track.id;
+		fetch(albumCoverUrl(track.albumId), { credentials: 'include' })
+			.then((resp) => (resp.ok ? resp.blob() : null))
+			.then((blob) => {
+				if (!blob) return;
+				const current = get({ subscribe });
+				if (current.queue[current.queueIndex]?.id !== trackId) return;
+				const reader = new FileReader();
+				reader.onload = () => {
+					const dataUrl = reader.result as string;
+					if (!dataUrl) return;
+					// Re-check track is still current after the async read
+					const stillCurrent = get({ subscribe });
+					if (stillCurrent.queue[stillCurrent.queueIndex]?.id !== trackId) return;
+					navigator.mediaSession.metadata = new MediaMetadata({
+						title: track.title,
+						artist: track.artistName ?? '',
+						album: track.albumName,
+						artwork: [{ src: dataUrl, sizes: '400x400' }]
+					});
+				};
+				reader.readAsDataURL(blob);
+			})
+			.catch(() => {});
 	}
 
 	function preloadNextAudio() {
@@ -360,7 +408,12 @@ function createMediaPlayerStore() {
 
 		// Wire video element events
 		videoEl.onloadedmetadata = () => {
-			if (videoEl) update((s) => (s.type === 'video' ? { ...s, duration: videoEl!.duration } : s));
+			if (videoEl) {
+				update((s) => (s.type === 'video' ? { ...s, duration: videoEl!.duration } : s));
+				if (params.bookmarkSeconds) {
+					videoEl.currentTime = params.bookmarkSeconds;
+				}
+			}
 		};
 		videoEl.onplay = () => update((s) => (s.type === 'video' ? { ...s, isPlaying: true } : s));
 		videoEl.onpause = () => update((s) => (s.type === 'video' ? { ...s, isPlaying: false } : s));
@@ -376,6 +429,7 @@ function createMediaPlayerStore() {
 		if (state.type === 'audio' && audioEl) {
 			audioEl.play().catch(() => {});
 			update((s) => ({ ...s, isPlaying: true }));
+			if ('mediaSession' in navigator) navigator.mediaSession.playbackState = 'playing';
 		} else if (state.type === 'video' && videoEl) {
 			videoEl.play().catch(() => {});
 		}
@@ -386,6 +440,7 @@ function createMediaPlayerStore() {
 		if (state.type === 'audio' && audioEl) {
 			audioEl.pause();
 			update((s) => ({ ...s, isPlaying: false }));
+			if ('mediaSession' in navigator) navigator.mediaSession.playbackState = 'paused';
 		} else if (state.type === 'video' && videoEl) {
 			videoEl.pause();
 		}

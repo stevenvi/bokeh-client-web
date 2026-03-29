@@ -80,6 +80,10 @@
 	}
 
 	function onVideoClick(item: MediaItemView) {
+		if ($mediaPlayer.type === 'video' && $mediaPlayer.itemId === item.id) {
+			goto(`/watch/${item.id}`);
+			return;
+		}
 		mediaPlayer.playVideo({
 			itemId: item.id,
 			title: item.title,
@@ -116,18 +120,18 @@
 							class="group flex flex-col text-left"
 							onclick={() => onCollectionClick(col.id, col.name)}
 						>
-							<div class="relative w-full overflow-hidden rounded-lg bg-surface-raised" style="aspect-ratio: 3/4">
-								<img
-									src={collectionCoverUrl(col.id)}
-									alt=""
-									class="h-full w-full object-cover transition-transform duration-200 group-hover:scale-105"
-									onerror={(e) => { (e.currentTarget as HTMLImageElement).style.display = 'none'; }}
-								/>
+							<div class="relative w-full overflow-hidden rounded-lg bg-surface-raised" style="aspect-ratio: 4/3">
 								<div class="absolute inset-0 flex items-center justify-center pointer-events-none">
 									<svg class="text-text-muted h-10 w-10 opacity-30" fill="none" viewBox="0 0 24 24" stroke="currentColor">
 										<path stroke-linecap="round" stroke-linejoin="round" stroke-width="1" d="M3 7v10a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2h-6l-2-2H5a2 2 0 00-2 2z" />
 									</svg>
 								</div>
+								<img
+									src={collectionCoverUrl(col.id)}
+									alt=""
+									class="absolute inset-0 h-full w-full object-cover transition-transform duration-200 group-hover:scale-105"
+									onerror={(e) => { (e.currentTarget as HTMLImageElement).style.display = 'none'; }}
+								/>
 							</div>
 							<p class="text-text-primary mt-2 truncate text-sm font-medium">{col.name}</p>
 						</button>
@@ -150,18 +154,18 @@
 						onclick={() => onVideoClick(item)}
 					>
 						<!-- 3:4 thumbnail -->
-						<div class="relative w-full overflow-hidden rounded-lg bg-surface-raised" style="aspect-ratio: 3/4">
-							<img
-								src={videoCoverUrl(item.id)}
-								alt=""
-								class="h-full w-full object-cover transition-transform duration-200 group-hover:scale-105"
-								onerror={(e) => { (e.currentTarget as HTMLImageElement).style.display = 'none'; }}
-							/>
+						<div class="relative w-full overflow-hidden rounded-lg bg-surface-raised" style="aspect-ratio: 4/3">
 							<div class="absolute inset-0 flex items-center justify-center pointer-events-none">
 								<svg class="text-text-muted h-10 w-10 opacity-30" fill="none" viewBox="0 0 24 24" stroke="currentColor">
 									<path stroke-linecap="round" stroke-linejoin="round" stroke-width="1" d="M15 10l4.553-2.069A1 1 0 0121 8.82v6.36a1 1 0 01-1.447.894L15 14m0 0V10m0 4H5a2 2 0 01-2-2v-4a2 2 0 012-2h10v8z" />
 								</svg>
 							</div>
+							<img
+								src={videoCoverUrl(item.id)}
+								alt=""
+								class="absolute inset-0 h-full w-full object-cover transition-transform duration-200 group-hover:scale-105"
+								onerror={(e) => { (e.currentTarget as HTMLImageElement).style.display = 'none'; }}
+							/>
 							{#if pct != null}
 								<div class="absolute bottom-0 left-0 right-0 h-1 bg-black/40">
 									<div class="h-full bg-red-500" style="width: {pct}%"></div>

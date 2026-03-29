@@ -47,6 +47,82 @@ function loadState(): Partial<MusicPlayerState> {
 	return {};
 }
 
+// ---------------------------------------------------------------------------
+// MediaSession bridge — single point of contact with the OS media layer.
+//
+// All communication with navigator.mediaSession flows through these
+// functions. Nothing else in this module touches mediaSession directly.
+// ---------------------------------------------------------------------------
+
+const hasMediaSession = typeof navigator !== 'undefined' && 'mediaSession' in navigator;
+
+/** Register action handlers once. Callbacks are stable closures into the store. */
+function msInit(callbacks: {
+	play: () => void;
+	pause: () => void;
+	previous: () => void;
+	next: () => void;
+	seekTo: (time: number) => void;
+}) {
+	if (!hasMediaSession) return;
+	navigator.mediaSession.setActionHandler('play', callbacks.play);
+	navigator.mediaSession.setActionHandler('pause', callbacks.pause);
+	navigator.mediaSession.setActionHandler('previoustrack', callbacks.previous);
+	navigator.mediaSession.setActionHandler('nexttrack', callbacks.next);
+	navigator.mediaSession.setActionHandler('seekto', (details) => {
+		if (details.seekTime != null) callbacks.seekTo(details.seekTime);
+	});
+}
+
+/** Push track metadata (title, artist, artwork). Call when track changes. */
+function msSetTrack(track: QueueTrack) {
+	if (!hasMediaSession) return;
+	navigator.mediaSession.metadata = new MediaMetadata({
+		title: track.title,
+		artist: track.artistName ?? '',
+		album: track.albumName,
+		artwork: [{ src: albumCoverUrl(track.albumId), sizes: '400x400' }]
+	});
+}
+
+/** Tell the OS whether we are playing or paused. */
+function msSetPlaying(playing: boolean) {
+	if (!hasMediaSession) return;
+	navigator.mediaSession.playbackState = playing ? 'playing' : 'paused';
+}
+
+/**
+ * Push the authoritative position/duration to the OS.
+ * Must be called after msSetPlaying so the OS shows the correct state.
+ * Also must be called periodically (ontimeupdate) to keep the scrubber in
+ * sync, and immediately after any seek.
+ */
+function msSetPosition(position: number, duration: number, playbackRate = 1) {
+	if (!hasMediaSession) return;
+	if (!duration || !isFinite(duration)) return;
+	try {
+		navigator.mediaSession.setPositionState({
+			duration,
+			playbackRate,
+			position: Math.min(Math.max(position, 0), duration)
+		});
+	} catch {
+		// Safari can throw if position > duration due to floating-point
+	}
+}
+
+/** Clear everything — used when the player is closed. */
+function msClear() {
+	if (!hasMediaSession) return;
+	navigator.mediaSession.metadata = null;
+	navigator.mediaSession.playbackState = 'none';
+	try { navigator.mediaSession.setPositionState(); } catch { /* not all browsers support reset */ }
+}
+
+// ---------------------------------------------------------------------------
+// Player store
+// ---------------------------------------------------------------------------
+
 function createMusicPlayerStore() {
 	const saved = loadState();
 	const { subscribe, set, update } = writable<MusicPlayerState>({
@@ -61,7 +137,6 @@ function createMusicPlayerStore() {
 		visible: saved.visible ?? (saved.queue?.length ?? 0) > 0
 	});
 
-	// Persist queue state
 	function persist(state: MusicPlayerState) {
 		try {
 			localStorage.setItem(
@@ -81,37 +156,88 @@ function createMusicPlayerStore() {
 		}
 	}
 
-	// Audio elements for gapless playback
-	let currentAudio: HTMLAudioElement | null = null;
-	let nextAudio: HTMLAudioElement | null = null;
+	// Single persistent audio element. Reusing one element across tracks
+	// keeps the OS media session stably bound to it — creating a new element
+	// per track confuses iOS into not reflecting the correct playing state.
+	const audioEl = new Audio();
+	audioEl.crossOrigin = 'use-credentials';
+	audioEl.volume = saved.volume ?? 1;
+
 	let lastPersistTime = 0;
 
-	function createAudioElement(): HTMLAudioElement {
-		const audio = new Audio();
-		audio.crossOrigin = 'use-credentials';
-		return audio;
-	}
+	audioEl.ontimeupdate = () => {
+		const time = audioEl.currentTime;
+		update((s) => ({ ...s, currentTime: time }));
+		// Do NOT call msSetPosition here. The spec intends setPositionState to
+		// be called only at non-obvious transitions; the OS projects position
+		// forward on its own using playbackRate. Calling it on every tick
+		// causes macOS to continuously re-anchor from a potentially stale value,
+		// making the scrubber appear stuck at the pre-seek position.
+		const now = Date.now();
+		if (now - lastPersistTime >= 1000) {
+			lastPersistTime = now;
+			persist(get({ subscribe }));
+		}
+	};
 
-	function setupAudioEvents(audio: HTMLAudioElement) {
-		audio.ontimeupdate = () => {
-			update((s) => ({ ...s, currentTime: audio.currentTime }));
-			const now = Date.now();
-			if (now - lastPersistTime >= 1000) {
-				lastPersistTime = now;
-				persist(get({ subscribe }));
-			}
-		};
-		audio.onloadedmetadata = () => {
-			update((s) => ({ ...s, duration: audio.duration }));
-		};
-		audio.onended = () => {
-			next();
-		};
-		audio.onerror = () => {
-			// Skip to next track on error
-			next();
-		};
-	}
+	audioEl.onloadedmetadata = () => {
+		const dur = audioEl.duration;
+		update((s) => ({ ...s, duration: dur }));
+		// Duration is now known — give the OS a complete picture so the
+		// scrubber has a valid range from the start.
+		msSetPlaying(!audioEl.paused);
+		msSetPosition(audioEl.currentTime, dur, audioEl.playbackRate);
+	};
+
+	audioEl.onplaying = () => {
+		update((s) => ({ ...s, isPlaying: true }));
+		msSetPlaying(true);
+		if (isFinite(audioEl.duration)) {
+			msSetPosition(audioEl.currentTime, audioEl.duration, audioEl.playbackRate);
+		}
+	};
+
+	audioEl.onpause = () => {
+		if (audioEl.ended) return;
+		update((s) => ({ ...s, isPlaying: false }));
+		msSetPlaying(false);
+		if (isFinite(audioEl.duration)) {
+			msSetPosition(audioEl.currentTime, audioEl.duration, audioEl.playbackRate);
+		}
+	};
+
+	// After a seek completes, push the authoritative final position.
+	audioEl.onseeked = () => {
+		if (isFinite(audioEl.duration)) {
+			msSetPosition(audioEl.currentTime, audioEl.duration, audioEl.playbackRate);
+		}
+	};
+
+	// iOS fires 'emptied' when src is changed and briefly reverts the lock
+	// screen to the first metadata ever registered for this element.
+	// Re-push the current track's metadata immediately to suppress the flash.
+	audioEl.onemptied = () => {
+		const state = get({ subscribe });
+		const track = state.queue[state.currentIndex];
+		if (track) msSetTrack(track);
+	};
+
+	audioEl.onended = () => {
+		next();
+	};
+
+	audioEl.onerror = () => {
+		next();
+	};
+
+	// Register MediaSession action handlers once with stable closures.
+	msInit({
+		play: () => play(),
+		pause: () => pause(),
+		previous: () => previous(),
+		next: () => next(),
+		seekTo: (time: number) => seekTo(time)
+	});
 
 	// Restore paused session from a previous page load
 	function restoreSession() {
@@ -119,39 +245,22 @@ function createMusicPlayerStore() {
 		const track = state.queue[state.currentIndex];
 		if (!track) return;
 
-		currentAudio = createAudioElement();
-		currentAudio.volume = state.volume;
-		currentAudio.src = audioStreamUrl(track.id);
-		setupAudioEvents(currentAudio);
-		// Don't play — restore paused at saved position
+		// Set metadata before src so that when the element fires 'emptied'
+		// (on src change), onemptied re-pushes the correct track rather than
+		// iOS reverting to whatever was cached from a prior session.
+		msSetTrack(track);
+		msSetPlaying(false);
+
+		audioEl.src = audioStreamUrl(track.id);
+
 		const savedTime = state.currentTime;
 		if (savedTime > 0) {
-			currentAudio.addEventListener(
+			audioEl.addEventListener(
 				'loadedmetadata',
-				() => {
-					if (currentAudio) currentAudio.currentTime = savedTime;
-				},
+				() => { audioEl.currentTime = savedTime; },
 				{ once: true }
 			);
 		}
-
-		if ('mediaSession' in navigator) {
-			navigator.mediaSession.metadata = new MediaMetadata({
-				title: track.title,
-				artist: track.artistName ?? '',
-				album: track.albumName,
-				artwork: [{ src: albumCoverUrl(track.albumId), sizes: '400x400' }]
-			});
-			navigator.mediaSession.setActionHandler('play', () => play());
-			navigator.mediaSession.setActionHandler('pause', () => pause());
-			navigator.mediaSession.setActionHandler('previoustrack', () => previous());
-			navigator.mediaSession.setActionHandler('nexttrack', () => next());
-			navigator.mediaSession.setActionHandler('seekto', (details) => {
-				if (details.seekTime != null) seekTo(details.seekTime);
-			});
-		}
-
-		preloadNext();
 	}
 
 	function playCurrentTrack() {
@@ -159,52 +268,23 @@ function createMusicPlayerStore() {
 		const track = state.queue[state.currentIndex];
 		if (!track) return;
 
-		if (currentAudio) {
-			currentAudio.pause();
-			currentAudio.ontimeupdate = null;
-			currentAudio.onloadedmetadata = null;
-			currentAudio.onended = null;
+		// Set metadata before src — onemptied will re-push it, but setting it
+		// here first means the OS gets the correct track immediately rather
+		// than after a round-trip through emptied.
+		msSetTrack(track);
+		if (track.durationSeconds) {
+			msSetPosition(0, track.durationSeconds, 1);
 		}
 
-		currentAudio = createAudioElement();
-		currentAudio.volume = state.volume;
-		currentAudio.src = audioStreamUrl(track.id);
-		setupAudioEvents(currentAudio);
-		currentAudio.play().catch(() => {});
-
-		// Update MediaSession
-		if ('mediaSession' in navigator) {
-			navigator.mediaSession.metadata = new MediaMetadata({
-				title: track.title,
-				artist: track.artistName ?? '',
-				album: track.albumName,
-				artwork: [
-					{ src: albumCoverUrl(track.albumId), sizes: '400x400' }
-				]
-			});
-			navigator.mediaSession.setActionHandler('play', () => play());
-			navigator.mediaSession.setActionHandler('pause', () => pause());
-			navigator.mediaSession.setActionHandler('previoustrack', () => previous());
-			navigator.mediaSession.setActionHandler('nexttrack', () => next());
-			navigator.mediaSession.setActionHandler('seekto', (details) => {
-				if (details.seekTime != null) seekTo(details.seekTime);
-			});
-		}
+		audioEl.src = audioStreamUrl(track.id);
+		// No explicit load() — play() triggers the resource load, and
+		// avoiding load() prevents an unnecessary emptied/reset cycle that
+		// causes iOS to flash old metadata on the lock screen.
+		audioEl.play().catch(() => {});
+		// onplaying pushes msSetPlaying(true) + msSetPosition once audio
+		// is genuinely outputting.
 
 		update((s) => ({ ...s, isPlaying: true, currentTime: 0, duration: 0 }));
-
-		// Preload next track
-		preloadNext();
-	}
-
-	function preloadNext() {
-		const state = get({ subscribe });
-		const nextIndex = state.currentIndex + 1;
-		if (nextIndex < state.queue.length) {
-			nextAudio = createAudioElement();
-			nextAudio.src = audioStreamUrl(state.queue[nextIndex].id);
-			nextAudio.preload = 'auto';
-		}
 	}
 
 	function tracksToQueue(albumId: number, albumName: string, tracks: TrackView[]): QueueTrack[] {
@@ -252,26 +332,20 @@ function createMusicPlayerStore() {
 	}
 
 	function play() {
-		if (currentAudio) {
-			currentAudio.play().catch(() => {});
-			update((s) => ({ ...s, isPlaying: true }));
-		}
+		audioEl.play().catch(() => {});
+		// onplaying syncs state to store + OS
 	}
 
 	function pause() {
-		if (currentAudio) {
-			currentAudio.pause();
-			update((s) => ({ ...s, isPlaying: false }));
-		}
+		audioEl.pause();
+		// onpause syncs state to store + OS
 	}
 
 	function next() {
 		const state = get({ subscribe });
 		if (state.repeat === 'one') {
-			if (currentAudio) {
-				currentAudio.currentTime = 0;
-				currentAudio.play().catch(() => {});
-			}
+			audioEl.currentTime = 0;
+			audioEl.play().catch(() => {});
 			return;
 		}
 
@@ -284,64 +358,30 @@ function createMusicPlayerStore() {
 			if (state.repeat === 'all') {
 				nextIndex = 0;
 			} else {
-				// Playlist ended — close player
+				audioEl.pause();
 				update((s) => {
 					const newState = { ...s, isPlaying: false, visible: false, queue: [], currentIndex: 0 };
 					persist(newState);
 					return newState;
 				});
-				if (currentAudio) {
-					currentAudio.pause();
-					currentAudio = null;
-				}
+				msClear();
 				return;
 			}
 		}
 
-		// Use preloaded audio if available and it matches
-		if (nextAudio && !state.shuffle && nextIndex === state.currentIndex + 1) {
-			if (currentAudio) {
-				currentAudio.pause();
-				currentAudio.ontimeupdate = null;
-				currentAudio.onloadedmetadata = null;
-				currentAudio.onended = null;
-			}
-			currentAudio = nextAudio;
-			nextAudio = null;
-			setupAudioEvents(currentAudio);
-			currentAudio.volume = state.volume;
-			currentAudio.play().catch(() => {});
-			update((s) => {
-				const newState = { ...s, currentIndex: nextIndex, isPlaying: true, currentTime: 0, duration: 0 };
-				persist(newState);
-				return newState;
-			});
-			// Update MediaSession for new track
-			const track = state.queue[nextIndex];
-			if (track && 'mediaSession' in navigator) {
-				navigator.mediaSession.metadata = new MediaMetadata({
-					title: track.title,
-					artist: track.artistName ?? '',
-					album: track.albumName,
-					artwork: [{ src: albumCoverUrl(track.albumId), sizes: '400x400' }]
-				});
-			}
-			preloadNext();
-		} else {
-			update((s) => {
-				const newState = { ...s, currentIndex: nextIndex };
-				persist(newState);
-				return newState;
-			});
-			playCurrentTrack();
-		}
+		update((s) => {
+			const newState = { ...s, currentIndex: nextIndex };
+			persist(newState);
+			return newState;
+		});
+		playCurrentTrack();
 	}
 
 	function previous() {
 		const state = get({ subscribe });
-		// If more than 3 seconds in, restart current track
-		if (currentAudio && currentAudio.currentTime > 3) {
-			currentAudio.currentTime = 0;
+		if (audioEl.currentTime > 3) {
+			audioEl.currentTime = 0;
+			msSetPosition(0, audioEl.duration, audioEl.playbackRate);
 			return;
 		}
 		const prevIndex = Math.max(0, state.currentIndex - 1);
@@ -354,16 +394,13 @@ function createMusicPlayerStore() {
 	}
 
 	function seekTo(time: number) {
-		if (currentAudio) {
-			currentAudio.currentTime = time;
-			update((s) => ({ ...s, currentTime: time }));
-		}
+		audioEl.currentTime = time;
+		update((s) => ({ ...s, currentTime: time }));
+		// onseeked will push the definitive position once the seek lands
 	}
 
 	function setVolume(volume: number) {
-		if (currentAudio) {
-			currentAudio.volume = volume;
-		}
+		audioEl.volume = volume;
 		update((s) => {
 			const newState = { ...s, volume };
 			persist(newState);
@@ -391,21 +428,16 @@ function createMusicPlayerStore() {
 	}
 
 	function close() {
-		if (currentAudio) {
-			currentAudio.pause();
-			currentAudio = null;
-		}
-		if (nextAudio) {
-			nextAudio = null;
-		}
+		audioEl.pause();
+		audioEl.src = '';
 		update((s) => {
 			const newState = { ...s, isPlaying: false, visible: false, queue: [], currentIndex: 0 };
 			persist(newState);
 			return newState;
 		});
+		msClear();
 	}
 
-	// If there's a saved queue, restore the player in a paused state
 	if (saved.queue && saved.queue.length > 0) {
 		restoreSession();
 	}
