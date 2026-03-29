@@ -202,6 +202,9 @@ function createMediaPlayerStore() {
 						album: track.albumName,
 						artwork: [{ src: dataUrl, sizes: '400x400' }]
 					});
+					// iOS resets playbackState when metadata is reassigned.
+					// Re-assert the correct state after the artwork update.
+					navigator.mediaSession.playbackState = stillCurrent.isPlaying ? 'playing' : 'paused';
 				};
 				reader.readAsDataURL(blob);
 			})
@@ -450,6 +453,13 @@ function createMediaPlayerStore() {
 		const state = get({ subscribe });
 		if (state.type === 'audio' && audioEl) {
 			audioEl.currentTime = time;
+			if ('mediaSession' in navigator && isFinite(audioEl.duration)) {
+				navigator.mediaSession.setPositionState({
+					duration: audioEl.duration,
+					playbackRate: audioEl.playbackRate,
+					position: Math.min(Math.max(time, 0), audioEl.duration)
+				});
+			}
 		} else if (state.type === 'video' && videoEl) {
 			videoEl.currentTime = time;
 		}
