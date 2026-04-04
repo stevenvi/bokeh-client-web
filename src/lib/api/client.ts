@@ -65,6 +65,46 @@ export async function apiFetch<T = void>(path: string, options: RequestInit = {}
 }
 
 /**
+ * apiFetchForm performs a request with a FormData body (multipart/form-data).
+ * Does not set Content-Type so the browser can include the multipart boundary.
+ */
+export async function apiFetchForm<T = void>(path: string, body: FormData, method = 'POST'): Promise<T> {
+	const store = await getAppStore();
+	const { serverUrl } = get(store);
+	const base = serverUrl ?? '';
+
+	let res: Response;
+	try {
+		res = await fetch(`${base}${path}`, {
+			method,
+			body,
+			credentials: 'include'
+		});
+	} catch {
+		store.setConnected(false);
+		throw new ApiError(0, 'network_error', 'Network error — server unreachable');
+	}
+
+	store.setConnected(true);
+
+	if (!res.ok) {
+		let message = res.statusText;
+		try {
+			const errBody = await res.json();
+			message = errBody.message ?? message;
+		} catch {
+			// ignore parse errors
+		}
+		throw new ApiError(res.status, String(res.status), message);
+	}
+
+	if (res.status === 204) {
+		return undefined as T;
+	}
+	return res.json() as Promise<T>;
+}
+
+/**
  * apiFetchText performs a GET and returns the plain-text body.
  * Used for endpoints like /api/v1/system/version.
  */

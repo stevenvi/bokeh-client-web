@@ -9,6 +9,8 @@
 	import { getMe, refresh } from '$lib/api/auth';
 	import { getOrCreateDeviceUUID } from '$lib/utils/deviceName';
 	import NetworkErrorBanner from '$lib/components/NetworkErrorBanner.svelte';
+	import Toast from '$lib/components/Toast.svelte';
+	import { toastStore } from '$lib/stores/toast';
 	import ServerSelectScreen from '$lib/components/ServerSelectScreen.svelte';
 	import LoginScreen from '$lib/components/LoginScreen.svelte';
 	import HamburgerMenu from '$lib/components/HamburgerMenu.svelte';
@@ -79,6 +81,9 @@
 
 	<!-- Network error banner is always rendered so it can intercept failures at any time -->
 	<NetworkErrorBanner />
+
+	<!-- Global toast for admin actions -->
+	<Toast message={$toastStore.message} visible={$toastStore.visible} />
 </QueryClientProvider>
 
 <style>

@@ -1,5 +1,6 @@
 <script lang="ts">
 	import { collectionCoverUrl } from '$lib/api/media';
+	import { coverBustStore } from '$lib/stores/coverBust';
 
 	interface Props {
 		id: number;
@@ -18,7 +19,7 @@
 		<!-- Cover image (hidden until loaded; suppressed on error) -->
 		{#if !coverError}
 			<img
-				src={collectionCoverUrl(id)}
+				src={collectionCoverUrl(id) + ($coverBustStore[id] ? `?v=${$coverBustStore[id]}` : '')}
 				alt=""
 				class="absolute inset-0 h-full w-full object-cover transition-opacity duration-300"
 				class:opacity-0={!coverLoaded}

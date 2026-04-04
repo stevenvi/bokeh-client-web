@@ -1,15 +1,17 @@
 <script lang="ts">
 	import { onMount } from 'svelte';
 	import PathBrowserNode from './PathBrowserNode.svelte';
+	import type { DirectoryEntry } from '$lib/api/admin';
 
 	type NodeState = {
-		children: string[] | 'error' | null; // null = loading
+		children: DirectoryEntry[] | 'error' | null; // null = loading
 		expanded: boolean;
 	};
 
 	let {
 		path,
 		name,
+		entryType,
 		depth,
 		nodes,
 		selectedPath,
@@ -19,17 +21,18 @@
 	}: {
 		path: string;
 		name: string;
+		entryType: string;
 		depth: number;
 		nodes: Record<string, NodeState>;
 		selectedPath: string;
 		fetchDir: (path: string) => void;
 		toggleExpand: (path: string) => void;
-		onSelect: (path: string) => void;
+		onSelect: (path: string, type: string) => void;
 	} = $props();
 
 	let node = $derived(nodes[path]);
 	let hasChildren = $derived(
-		node !== undefined && Array.isArray(node.children) && (node.children as string[]).length > 0
+		node !== undefined && Array.isArray(node.children) && (node.children as DirectoryEntry[]).length > 0
 	);
 	let isExpanded = $derived(node?.expanded ?? false);
 	let isSelected = $derived(selectedPath === path);
@@ -52,8 +55,8 @@
 		tabindex="0"
 		class="flex w-full cursor-pointer items-center gap-1.5 rounded-sm py-0.5 pr-2 hover:bg-white/5 {isSelected ? 'bg-accent/10' : ''}"
 		style="padding-left: {rowPadding}px"
-		onclick={() => onSelect(path)}
-		onkeydown={(e) => e.key === 'Enter' && onSelect(path)}
+		onclick={() => onSelect(path, entryType)}
+		onkeydown={(e) => e.key === 'Enter' && onSelect(path, entryType)}
 	>
 		{#if isError}
 			<span
@@ -83,10 +86,11 @@
 
 	{#if isExpanded && Array.isArray(node?.children)}
 		<div class="border-l border-white/10" style="margin-left: {wrapperMargin}px">
-			{#each node.children as childName (childName)}
+			{#each node.children as entry (entry.name)}
 				<PathBrowserNode
-					path="{path}/{childName}"
-					name={childName}
+					path="{path}/{entry.name}"
+					name={entry.name}
+					entryType={entry.type}
 					depth={depth + 1}
 					{nodes}
 					{selectedPath}

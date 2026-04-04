@@ -5,6 +5,8 @@
 	import { listCollections } from '$lib/api/collections';
 	import { navigationStore } from '$lib/stores/navigation';
 	import CollectionTile from '$lib/components/CollectionTile.svelte';
+	import AdminCollectionMenu from '$lib/components/AdminCollectionMenu.svelte';
+	import { authStore } from '$lib/stores/auth';
 
 	const collectionsQuery = createQuery({
 		queryKey: ['collections'],
@@ -25,7 +27,7 @@
 	<title>Bokeh</title>
 </svelte:head>
 
-<main class="min-h-dvh bg-bg px-4 py-6 pb-safe">
+<main class="min-h-dvh px-4 py-6 pb-safe">
 	<h1 class="text-text-primary mb-6 text-2xl font-semibold">Your Library</h1>
 
 	{#if $collectionsQuery.isPending}
@@ -46,12 +48,19 @@
 	{:else}
 		<div class="grid grid-cols-2 gap-4 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6">
 			{#each $collectionsQuery.data ?? [] as collection (collection.id)}
-				<CollectionTile
-					id={collection.id}
-					name={collection.name}
-					type={collection.type}
-					onclick={() => openCollection(collection.id, collection.name)}
-				/>
+				<div class="relative">
+					<CollectionTile
+						id={collection.id}
+						name={collection.name}
+						type={collection.type}
+						onclick={() => openCollection(collection.id, collection.name)}
+					/>
+					{#if $authStore?.isAdmin}
+						<div class="absolute top-1 right-1 z-10" onclick={(e) => e.stopPropagation()}>
+							<AdminCollectionMenu collection={collection} />
+						</div>
+					{/if}
+				</div>
 			{/each}
 		</div>
 	{/if}

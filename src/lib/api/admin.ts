@@ -1,4 +1,4 @@
-import { apiFetch } from './client';
+import { apiFetch, apiFetchForm } from './client';
 import type { AdminCollection, AdminUser, Job } from '$lib/types';
 
 // ── Collections ───────────────────────────────────────────────────────────────
@@ -29,6 +29,24 @@ export function adminTriggerScan(id: number, force = false): Promise<{ job_id: n
 	});
 }
 
+export function adminUploadCollectionCover(id: number, file: File): Promise<void> {
+	const form = new FormData();
+	form.append('cover', file);
+	return apiFetchForm<void>(`/api/v1/admin/collections/${id}/cover`, form);
+}
+
+export function adminUploadVideoCover(id: number, file: File): Promise<void> {
+	const form = new FormData();
+	form.append('cover', file);
+	return apiFetchForm<void>(`/api/v1/admin/media/${id}/cover`, form);
+}
+
+export function adminUploadArtistImage(id: number, file: File): Promise<void> {
+	const form = new FormData();
+	form.append('image', file);
+	return apiFetchForm<void>(`/api/v1/admin/artists/${id}/image`, form);
+}
+
 export function adminDeleteDerivatives(id: number): Promise<{ deleted: number }> {
 	return apiFetch<{ deleted: number }>(`/api/v1/admin/collections/${id}/derivatives`, {
 		method: 'DELETE'
@@ -55,13 +73,15 @@ export function adminListUsers(): Promise<AdminUser[]> {
 export function adminCreateUser(
 	name: string,
 	password: string,
-	isAdmin: boolean
+	isAdmin: boolean,
+	localAccessOnly: boolean
 ): Promise<{ id: number }> {
 	return apiFetch<{ id: number }>('/api/v1/admin/users', {
 		method: 'POST',
 		body: JSON.stringify({
 			name,
 			is_admin: isAdmin,
+			local_access_only: localAccessOnly,
 			auth_provider: 'local',
 			credentials: { password }
 		})
@@ -95,11 +115,13 @@ export function adminGetJob(id: number): Promise<Job> {
 
 // ── Filesystem ────────────────────────────────────────────────────────────────
 
-export function adminListDirectories(path: string): Promise<string[]> {
+export type DirectoryEntry = { name: string; type: string };
+
+export function adminListDirectories(path: string): Promise<DirectoryEntry[]> {
 	const url = path
 		? `/api/v1/admin/directories/${path.split('/').map(encodeURIComponent).join('/')}`
 		: '/api/v1/admin/directories';
-	return apiFetch<string[]>(url);
+	return apiFetch<DirectoryEntry[]>(url);
 }
 
 // ── Maintenance ───────────────────────────────────────────────────────────────

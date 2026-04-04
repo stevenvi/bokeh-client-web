@@ -1,12 +1,15 @@
 <script lang="ts">
 	import { onMount } from 'svelte';
-	import { adminListDirectories } from '$lib/api/admin';
+	import { adminListDirectories, type DirectoryEntry } from '$lib/api/admin';
 	import PathBrowserNode from './PathBrowserNode.svelte';
 
-	let { selectedPath = $bindable('') }: { selectedPath?: string } = $props();
+	let {
+		selectedPath = $bindable(''),
+		selectedType = $bindable('')
+	}: { selectedPath?: string; selectedType?: string } = $props();
 
 	type NodeState = {
-		children: string[] | 'error' | null; // null = loading
+		children: DirectoryEntry[] | 'error' | null; // null = loading
 		expanded: boolean;
 	};
 
@@ -16,15 +19,15 @@
 	let rootLoading = $derived(!rootNode || rootNode.children === null);
 	let rootError = $derived(rootNode?.children === 'error');
 	let rootChildren = $derived(
-		Array.isArray(rootNode?.children) ? (rootNode.children as string[]) : []
+		Array.isArray(rootNode?.children) ? (rootNode.children as DirectoryEntry[]) : []
 	);
 
 	async function fetchDir(path: string) {
 		if (path in nodes) return;
 		nodes[path] = { children: null, expanded: false };
 		try {
-			const names = await adminListDirectories(path);
-			nodes[path] = { children: names, expanded: false };
+			const entries = await adminListDirectories(path);
+			nodes[path] = { children: entries, expanded: false };
 		} catch {
 			nodes[path] = { children: 'error', expanded: false };
 		}
@@ -47,16 +50,17 @@
 	{:else if rootChildren.length === 0}
 		<p class="text-text-muted px-3 py-2 text-xs">No directories found in media root.</p>
 	{:else}
-		{#each rootChildren as name (name)}
+		{#each rootChildren as entry (entry.name)}
 			<PathBrowserNode
-				path={name}
-				{name}
+				path={entry.name}
+				name={entry.name}
+				entryType={entry.type}
 				depth={0}
 				{nodes}
 				{selectedPath}
 				{fetchDir}
 				{toggleExpand}
-				onSelect={(p) => (selectedPath = p)}
+				onSelect={(p, t) => { selectedPath = p; selectedType = t; }}
 			/>
 		{/each}
 	{/if}

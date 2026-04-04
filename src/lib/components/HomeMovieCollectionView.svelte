@@ -7,6 +7,11 @@
 	import { mediaPlayer } from '$lib/stores/mediaPlayer';
 	import { navigationStore } from '$lib/stores/navigation';
 	import type { CollectionView, MediaItemView } from '$lib/types';
+	import AdminTileMenu from './AdminTileMenu.svelte';
+	import { authStore } from '$lib/stores/auth';
+	import { adminTriggerScan, adminUploadCollectionCover, adminUploadVideoCover } from '$lib/api/admin';
+	import { coverBustStore, bumpCoverBust, videoCoverBust, bumpVideoCoverBust } from '$lib/stores/coverBust';
+	import { toastStore } from '$lib/stores/toast';
 
 	interface Props {
 		collection: CollectionView;
@@ -116,25 +121,38 @@
 				<h2 class="text-text-muted mb-3 text-xs font-semibold uppercase tracking-wide">Collections</h2>
 				<div class="grid grid-cols-2 gap-4 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6">
 					{#each childCollections as col (col.id)}
-						<button
-							class="group flex flex-col text-left"
-							onclick={() => onCollectionClick(col.id, col.name)}
-						>
-							<div class="relative w-full overflow-hidden rounded-lg bg-surface-raised" style="aspect-ratio: 4/3">
-								<div class="absolute inset-0 flex items-center justify-center pointer-events-none">
-									<svg class="text-text-muted h-10 w-10 opacity-30" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-										<path stroke-linecap="round" stroke-linejoin="round" stroke-width="1" d="M3 7v10a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2h-6l-2-2H5a2 2 0 00-2 2z" />
-									</svg>
+						<div class="relative">
+							<button
+								class="group flex w-full flex-col text-left"
+								onclick={() => onCollectionClick(col.id, col.name)}
+							>
+								<div class="relative w-full overflow-hidden rounded-lg bg-surface-raised" style="aspect-ratio: 4/3">
+									<div class="absolute inset-0 flex items-center justify-center pointer-events-none">
+										<svg class="text-text-muted h-10 w-10 opacity-30" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+											<path stroke-linecap="round" stroke-linejoin="round" stroke-width="1" d="M3 7v10a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2h-6l-2-2H5a2 2 0 00-2 2z" />
+										</svg>
+									</div>
+									{#key $coverBustStore[col.id]}
+										<img
+											src={collectionCoverUrl(col.id) + ($coverBustStore[col.id] ? `?v=${$coverBustStore[col.id]}` : '')}
+											alt=""
+											class="absolute inset-0 h-full w-full object-cover transition-transform duration-200 group-hover:scale-105"
+											onerror={(e) => { (e.currentTarget as HTMLImageElement).style.display = 'none'; }}
+										/>
+									{/key}
 								</div>
-								<img
-									src={collectionCoverUrl(col.id)}
-									alt=""
-									class="absolute inset-0 h-full w-full object-cover transition-transform duration-200 group-hover:scale-105"
-									onerror={(e) => { (e.currentTarget as HTMLImageElement).style.display = 'none'; }}
-								/>
-							</div>
-							<p class="text-text-primary mt-2 truncate text-sm font-medium">{col.name}</p>
-						</button>
+								<p class="text-text-primary mt-2 truncate text-sm font-medium">{col.name}</p>
+							</button>
+							{#if $authStore?.isAdmin}
+								<div class="absolute top-1 right-1 z-10" onclick={(e) => e.stopPropagation()}>
+									<AdminTileMenu items={[
+										{ emoji: '🔄', label: 'Rescan Library', action: async () => { const r = await adminTriggerScan(col.id); toastStore.show(`Scan job #${r.job_id} queued.`); } },
+										{ emoji: '🔃', label: 'Refresh Metadata', action: async () => { const r = await adminTriggerScan(col.id, true); toastStore.show(`Metadata refresh job #${r.job_id} queued.`); } },
+										{ emoji: '🖼', label: 'Upload Cover Image', fileAccept: 'image/*', onFile: async (f) => { await adminUploadCollectionCover(col.id, f); bumpCoverBust(col.id); toastStore.show('Cover updated.'); } }
+									]} />
+								</div>
+							{/if}
+						</div>
 					{/each}
 				</div>
 			</div>
@@ -149,37 +167,49 @@
 				{#each items as item (item.id)}
 					{@const pct = progressPercent(item)}
 					{@const dateStr = formatDate(item)}
-					<button
-						class="group flex flex-col text-left"
-						onclick={() => onVideoClick(item)}
-					>
-						<!-- 3:4 thumbnail -->
-						<div class="relative w-full overflow-hidden rounded-lg bg-surface-raised" style="aspect-ratio: 4/3">
-							<div class="absolute inset-0 flex items-center justify-center pointer-events-none">
-								<svg class="text-text-muted h-10 w-10 opacity-30" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-									<path stroke-linecap="round" stroke-linejoin="round" stroke-width="1" d="M15 10l4.553-2.069A1 1 0 0121 8.82v6.36a1 1 0 01-1.447.894L15 14m0 0V10m0 4H5a2 2 0 01-2-2v-4a2 2 0 012-2h10v8z" />
-								</svg>
-							</div>
-							<img
-								src={videoCoverUrl(item.id)}
-								alt=""
-								class="absolute inset-0 h-full w-full object-cover transition-transform duration-200 group-hover:scale-105"
-								onerror={(e) => { (e.currentTarget as HTMLImageElement).style.display = 'none'; }}
-							/>
-							{#if pct != null}
-								<div class="absolute bottom-0 left-0 right-0 h-1 bg-black/40">
-									<div class="h-full bg-red-500" style="width: {pct}%"></div>
+					<div class="relative">
+						<button
+							class="group flex w-full flex-col text-left"
+							onclick={() => onVideoClick(item)}
+						>
+							<!-- 3:4 thumbnail -->
+							<div class="relative w-full overflow-hidden rounded-lg bg-surface-raised" style="aspect-ratio: 4/3">
+								<div class="absolute inset-0 flex items-center justify-center pointer-events-none">
+									<svg class="text-text-muted h-10 w-10 opacity-30" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+										<path stroke-linecap="round" stroke-linejoin="round" stroke-width="1" d="M15 10l4.553-2.069A1 1 0 0121 8.82v6.36a1 1 0 01-1.447.894L15 14m0 0V10m0 4H5a2 2 0 01-2-2v-4a2 2 0 012-2h10v8z" />
+									</svg>
 								</div>
+								{#key $videoCoverBust[item.id]}
+									<img
+										src={videoCoverUrl(item.id) + ($videoCoverBust[item.id] ? `?v=${$videoCoverBust[item.id]}` : '')}
+										alt=""
+										class="absolute inset-0 h-full w-full object-cover transition-transform duration-200 group-hover:scale-105"
+										onerror={(e) => { (e.currentTarget as HTMLImageElement).style.display = 'none'; }}
+									/>
+								{/key}
+								{#if pct != null}
+									<div class="absolute bottom-0 left-0 right-0 h-1 bg-black/40">
+										<div class="h-full bg-red-500" style="width: {pct}%"></div>
+									</div>
+								{/if}
+							</div>
+							<p class="text-text-primary mt-2 truncate text-sm font-medium">{item.title}</p>
+							{#if dateStr}
+								<p class="text-text-muted text-xs truncate">{dateStr}</p>
 							{/if}
-						</div>
-						<p class="text-text-primary mt-2 truncate text-sm font-medium">{item.title}</p>
-						{#if dateStr}
-							<p class="text-text-muted text-xs truncate">{dateStr}</p>
+							{#if item.video?.author}
+								<p class="text-text-muted text-xs truncate">{item.video.author}</p>
+							{/if}
+						</button>
+						{#if $authStore?.isAdmin}
+							<div class="absolute top-1 right-1 z-10" onclick={(e) => e.stopPropagation()}>
+								<AdminTileMenu items={[
+									{ emoji: '🔃', label: 'Refresh Metadata', action: async () => { const r = await adminTriggerScan(collection.id, true); toastStore.show(`Metadata refresh job #${r.job_id} queued.`); } },
+									{ emoji: '🖼', label: 'Upload Image', fileAccept: 'image/*', onFile: async (f) => { await adminUploadVideoCover(item.id, f); bumpVideoCoverBust(item.id); toastStore.show('Image updated.'); } }
+								]} />
+							</div>
 						{/if}
-						{#if item.video?.author}
-							<p class="text-text-muted text-xs truncate">{item.video.author}</p>
-						{/if}
-					</button>
+					</div>
 				{/each}
 			</div>
 		{/if}

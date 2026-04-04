@@ -80,7 +80,7 @@
 	<title>Profile — Bokeh</title>
 </svelte:head>
 
-<main class="bg-bg min-h-dvh px-4 py-6">
+<main class="min-h-dvh px-4 py-6">
 	<h1 class="text-text-primary mb-8 text-2xl font-semibold">Profile</h1>
 
 	<!-- Change Password -->

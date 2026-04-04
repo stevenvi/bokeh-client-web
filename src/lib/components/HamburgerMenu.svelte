@@ -100,7 +100,7 @@
 </script>
 
 <!-- Top bar -->
-<nav class="bg-bg/90 sticky top-0 z-20 flex items-center gap-2 px-3 py-2 backdrop-blur-sm" aria-label="Top bar">
+<nav class="bg-bg sticky top-0 z-20 flex items-center gap-2 px-3 py-2 backdrop-blur-sm" aria-label="Top bar">
 	<!-- Mobile: back button + title -->
 	{#if !isHome}
 		<button

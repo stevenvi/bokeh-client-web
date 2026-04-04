@@ -101,6 +101,8 @@ function createMediaPlayerStore() {
 	let lastPersistTime = 0;
 	// eslint-disable-next-line @typescript-eslint/no-explicit-any
 	let hlsInstance: any = null;
+	// Artwork cache — keyed by albumId to avoid re-fetching within an album
+	let artworkCache: { albumId: number; dataUrl: string } | null = null;
 
 	function persist(state: MediaPlayerState) {
 		try {
@@ -133,7 +135,21 @@ function createMediaPlayerStore() {
 			}
 		};
 		audioEl.onloadedmetadata = () => {
-			if (audioEl) update((s) => ({ ...s, duration: audioEl!.duration }));
+			if (!audioEl) return;
+			update((s) => ({ ...s, duration: audioEl!.duration }));
+			// Once the real duration is known, re-push the complete playing state.
+			// The earlier setPositionState in setupMediaSession used an estimated
+			// duration from queue metadata; this corrects it with the actual value,
+			// and gives iOS the simultaneous playbackState + setPositionState update
+			// it needs to render the lock screen as actively playing.
+			if ('mediaSession' in navigator && !audioEl.paused) {
+				navigator.mediaSession.playbackState = 'playing';
+				navigator.mediaSession.setPositionState({
+					duration: audioEl.duration,
+					playbackRate: audioEl.playbackRate,
+					position: audioEl.currentTime
+				});
+			}
 		};
 		audioEl.onended = () => {
 			if (get({ subscribe }).type === 'audio') next();
@@ -145,31 +161,17 @@ function createMediaPlayerStore() {
 			if ('mediaSession' in navigator) navigator.mediaSession.playbackState = 'playing';
 		};
 		audioEl.onpause = () => {
-			if ('mediaSession' in navigator) navigator.mediaSession.playbackState = 'paused';
+			// Do not update the OS playback state here. The 'pause' event fires
+			// for track transitions (src change), buffering stalls, and seeks —
+			// not just user-initiated pauses. Signalling 'paused' on every one
+			// causes the play-pause-play flicker on the lock screen.
+			// Explicit pause() and the OS action handler are the only paths that
+			// should send 'paused' to the OS.
 		};
 	}
 
 	function setupMediaSession(track: AudioQueueItem) {
 		if (!('mediaSession' in navigator)) return;
-
-		// Set title/artist/album immediately so lock screen text appears right away.
-		navigator.mediaSession.metadata = new MediaMetadata({
-			title: track.title,
-			artist: track.artistName ?? '',
-			album: track.albumName,
-			artwork: []
-		});
-
-		// iOS requires playbackState = 'playing' before it renders metadata on the lock screen.
-		navigator.mediaSession.playbackState = 'playing';
-
-		if (track.durationSeconds) {
-			navigator.mediaSession.setPositionState({
-				duration: track.durationSeconds,
-				playbackRate: 1,
-				position: 0
-			});
-		}
 
 		navigator.mediaSession.setActionHandler('play', () => play());
 		navigator.mediaSession.setActionHandler('pause', () => pause());
@@ -179,9 +181,34 @@ function createMediaPlayerStore() {
 			if (d.seekTime != null) seekTo(d.seekTime);
 		});
 
-		// Fetch artwork with auth credentials. Convert to a base64 data URL so the
-		// OS can render it on the lock screen without needing to make a credentialed
-		// request itself (blob: URLs are not accessible outside the browser process).
+		if (track.durationSeconds) {
+			navigator.mediaSession.setPositionState({
+				duration: track.durationSeconds,
+				playbackRate: 1,
+				position: 0
+			});
+		}
+
+		function applyMetadata(dataUrl: string | null) {
+			navigator.mediaSession.metadata = new MediaMetadata({
+				title: track.title,
+				artist: track.artistName ?? '',
+				album: track.albumName,
+				artwork: dataUrl ? [{ src: dataUrl, sizes: '400x400' }] : []
+			});
+		}
+
+		// If artwork for this album is already cached, apply it immediately —
+		// no fetch, no flicker, no second metadata update.
+		if (artworkCache?.albumId === track.albumId) {
+			applyMetadata(artworkCache.dataUrl);
+			return;
+		}
+
+		// No cached artwork yet — set metadata without artwork first so the
+		// lock screen shows the track name immediately, then fetch and update.
+		applyMetadata(null);
+
 		const trackId = track.id;
 		fetch(albumCoverUrl(track.albumId), { credentials: 'include' })
 			.then((resp) => (resp.ok ? resp.blob() : null))
@@ -193,18 +220,11 @@ function createMediaPlayerStore() {
 				reader.onload = () => {
 					const dataUrl = reader.result as string;
 					if (!dataUrl) return;
+					artworkCache = { albumId: track.albumId, dataUrl };
 					// Re-check track is still current after the async read
 					const stillCurrent = get({ subscribe });
 					if (stillCurrent.queue[stillCurrent.queueIndex]?.id !== trackId) return;
-					navigator.mediaSession.metadata = new MediaMetadata({
-						title: track.title,
-						artist: track.artistName ?? '',
-						album: track.albumName,
-						artwork: [{ src: dataUrl, sizes: '400x400' }]
-					});
-					// iOS resets playbackState when metadata is reassigned.
-					// Re-assert the correct state after the artwork update.
-					navigator.mediaSession.playbackState = stillCurrent.isPlaying ? 'playing' : 'paused';
+					applyMetadata(dataUrl);
 				};
 				reader.readAsDataURL(blob);
 			})
@@ -256,7 +276,8 @@ function createMediaPlayerStore() {
 		audioEl.volume = state.volume;
 		audioEl.play().catch(() => {});
 
-		setupMediaSession(track);
+		// Set isPlaying: true before setupMediaSession so that applyMetadata
+		// reads the correct state when it checks isPlaying for playbackState.
 		update((s) => ({
 			...s,
 			type: 'audio' as const,
@@ -268,6 +289,7 @@ function createMediaPlayerStore() {
 			thumbnailUrl: albumCoverUrl(track.albumId),
 			visible: true
 		}));
+		setupMediaSession(track);
 		preloadNextAudio();
 	}
 

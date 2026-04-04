@@ -6,24 +6,20 @@
 	import {
 		adminListCollections,
 		adminCreateCollection,
-		adminDeleteCollection,
-		adminTriggerScan,
-		adminListCollectionUsers,
-		adminSetCollectionUsers,
 		adminListUsers,
 		adminCreateUser,
 		adminDeleteUser,
 		adminOrphanCleanup,
 		adminIntegrityCheck,
 		adminDeviceCleanup,
-		adminDeleteDerivatives,
 		adminCoverCycle
 	} from '$lib/api/admin';
 	import { collectionCoverUrl } from '$lib/api/media';
+	import { coverBustStore } from '$lib/stores/coverBust';
+	import { toastStore } from '$lib/stores/toast';
 	import ConfirmPopup from '$lib/components/ConfirmPopup.svelte';
 	import PathBrowser from '$lib/components/PathBrowser.svelte';
-	import Toast from '$lib/components/Toast.svelte';
-	import type { AdminCollection } from '$lib/types';
+	import AdminCollectionMenu from '$lib/components/AdminCollectionMenu.svelte';
 
 	const queryClient = useQueryClient();
 
@@ -38,14 +34,6 @@
 		if (e.key === 'Escape') {
 			history.back();
 		}
-	}
-
-	let toastMessage = $state('');
-	let toastVisible = $state(false);
-	function showToast(msg: string) {
-		toastMessage = msg;
-		toastVisible = true;
-		setTimeout(() => (toastVisible = false), 4000);
 	}
 
 	// ── Queries ────────────────────────────────────────────────────────────────
@@ -103,103 +91,16 @@
 			const path = newCollPath.trim();
 			const type = newCollType;
 			const res = await adminCreateCollection(name, type, path);
-			showToast(`Collection created. Scan job #${res.scan_job_id} queued.`);
+			toastStore.show(`Collection created. Scan job #${res.scan_job_id} queued.`);
 			newCollName = '';
 			newCollPath = '';
 			newCollType = 'image:photo';
 			showCreateCollection = false;
 			queryClient.invalidateQueries({ queryKey: ['admin-collections'] });
-			openGrantAccess({ id: res.id, name, type, relative_path: path, is_enabled: true, manual_cover: false, last_scanned_at: null });
 		} catch (e: unknown) {
-			createCollError = e instanceof Error ? e.message : 'Failed to create collection.';
+			createCollError = e instanceof Error ? e.message : 'Failed to create collection.'; // shown inline
 		} finally {
 			createCollLoading = false;
-		}
-	}
-
-	// ── Collection actions popup ───────────────────────────────────────────────
-	let selectedCollection: AdminCollection | null = $state(null);
-	let showCollectionActions = $state(false);
-	let confirmDeleteCollection: AdminCollection | null = $state(null);
-
-	async function handleRescan() {
-		if (!selectedCollection) return;
-		try {
-			const res = await adminTriggerScan(selectedCollection.id);
-			showToast(`Scan job #${res.job_id} queued.`);
-			showCollectionActions = false;
-		} catch (e: unknown) {
-			showToast(e instanceof Error ? e.message : 'Failed to trigger scan.');
-		}
-	}
-
-	let refreshMetadataLoading = $state(false);
-
-	async function handleRefreshMetadata() {
-		if (!selectedCollection) return;
-		refreshMetadataLoading = true;
-		try {
-			const res = await adminTriggerScan(selectedCollection.id, true);
-			showToast(`Metadata refresh job #${res.job_id} queued (force rescan).`);
-			showCollectionActions = false;
-		} catch (e: unknown) {
-			showToast(e instanceof Error ? e.message : 'Failed to trigger metadata refresh.');
-		} finally {
-			refreshMetadataLoading = false;
-		}
-	}
-
-	async function handleDeleteCollection() {
-		if (!confirmDeleteCollection) return;
-		try {
-			await adminDeleteCollection(confirmDeleteCollection.id);
-			showToast('Collection deleted.');
-			queryClient.invalidateQueries({ queryKey: ['admin-collections'] });
-		} catch (e: unknown) {
-			showToast(e instanceof Error ? e.message : 'Failed to delete collection.');
-		} finally {
-			confirmDeleteCollection = null;
-			showCollectionActions = false;
-		}
-	}
-
-	// ── Grant access popup ─────────────────────────────────────────────────────
-	let showGrantAccess = $state(false);
-	let grantAccessCollection: AdminCollection | null = $state(null);
-	let grantAccessCurrentIds = $state<number[]>([]);
-	let grantAccessSelected = $state<Set<number>>(new Set());
-	let grantAccessLoading = $state(false);
-
-	async function openGrantAccess(collection: AdminCollection) {
-		grantAccessCollection = collection;
-		showGrantAccess = true;
-		showCollectionActions = false;
-		try {
-			grantAccessCurrentIds = await adminListCollectionUsers(collection.id);
-			grantAccessSelected = new Set(grantAccessCurrentIds);
-		} catch {
-			grantAccessSelected = new Set();
-		}
-	}
-
-	function toggleUser(userId: number) {
-		const next = new Set(grantAccessSelected);
-		if (next.has(userId)) next.delete(userId);
-		else next.add(userId);
-		grantAccessSelected = next;
-	}
-
-	async function saveGrantAccess() {
-		if (!grantAccessCollection) return;
-		grantAccessLoading = true;
-		try {
-			await adminSetCollectionUsers(grantAccessCollection.id, [...grantAccessSelected]);
-			showToast('Access permissions saved.');
-			showGrantAccess = false;
-		} catch (e: unknown) {
-			showToast(e instanceof Error ? e.message : 'Failed to save permissions.');
-		} finally {
-			grantAccessLoading = false;
 		}
 	}
 
@@ -208,6 +109,7 @@
 	let newUserName = $state('');
 	let newUserPassword = $state('');
 	let newUserIsAdmin = $state(false);
+	let newUserLocalAccessOnly = $state(false);
 	let createUserError = $state('');
 	let createUserLoading = $state(false);
 
@@ -219,11 +121,12 @@
 		}
 		createUserLoading = true;
 		try {
-			const res = await adminCreateUser(newUserName.trim(), newUserPassword, newUserIsAdmin);
-			showToast(`User created (ID: ${res.id}).`);
+			const res = await adminCreateUser(newUserName.trim(), newUserPassword, newUserIsAdmin, newUserLocalAccessOnly);
+			toastStore.show(`User created (ID: ${res.id}).`);
 			newUserName = '';
 			newUserPassword = '';
 			newUserIsAdmin = false;
+			newUserLocalAccessOnly = false;
 			showCreateUser = false;
 			queryClient.invalidateQueries({ queryKey: ['admin-users'] });
 		} catch (e: unknown) {
@@ -241,10 +144,10 @@
 		if (confirmDeleteUserId === null) return;
 		try {
 			await adminDeleteUser(confirmDeleteUserId);
-			showToast('User deleted.');
+			toastStore.show('User deleted.');
 			queryClient.invalidateQueries({ queryKey: ['admin-users'] });
 		} catch (e: unknown) {
-			showToast(e instanceof Error ? e.message : 'Failed to delete user.');
+			toastStore.show(e instanceof Error ? e.message : 'Failed to delete user.');
 		} finally {
 			confirmDeleteUserId = null;
 		}
@@ -254,9 +157,9 @@
 	async function runMaintenance(fn: () => Promise<{ job_id: number }>, label: string) {
 		try {
 			const res = await fn();
-			showToast(`${label} queued as job #${res.job_id}.`);
+			toastStore.show(`${label} queued as job #${res.job_id}.`);
 		} catch (e: unknown) {
-			showToast(e instanceof Error ? e.message : `Failed to run ${label}.`);
+			toastStore.show(e instanceof Error ? e.message : `Failed to run ${label}.`);
 		}
 	}
 </script>
@@ -267,7 +170,7 @@
 	<title>Admin Dashboard — Bokeh</title>
 </svelte:head>
 
-<main class="bg-bg min-h-dvh px-4 py-6">
+<main class="min-h-dvh px-4 py-6">
 
 	<!-- ── Collection Management ─────────────────────────────────── -->
 	<section class="bg-surface mb-8 rounded-xl p-6">
@@ -288,19 +191,44 @@
 		{:else}
 			<div class="grid grid-cols-2 gap-3 sm:grid-cols-3 md:grid-cols-4">
 				{#each $collectionsQuery.data ?? [] as coll (coll.id)}
-					<button
-						class="bg-surface-raised border-border rounded-lg border p-3 text-left transition hover:border-accent"
-						onclick={() => { selectedCollection = coll; showCollectionActions = true; }}
-					>
-						<img
-							src={collectionCoverUrl(coll.id)}
-							alt=""
-							class="bg-border mb-2 aspect-square w-full rounded object-cover"
-							onerror={(e) => { (e.currentTarget as HTMLImageElement).style.display = 'none'; }}
-						/>
-						<p class="text-text-primary truncate text-sm font-medium">{coll.name}</p>
-						<p class="text-text-muted text-xs">{coll.type}</p>
-					</button>
+					<div class="relative">
+						<div class="bg-surface-raised border-border rounded-lg border p-3">
+							{#key $coverBustStore[coll.id]}
+								<div class="relative mb-2 aspect-square w-full overflow-hidden rounded">
+									<img
+										src={collectionCoverUrl(coll.id) + ($coverBustStore[coll.id] ? `?v=${$coverBustStore[coll.id]}` : '')}
+										alt=""
+										class="absolute inset-0 h-full w-full object-cover"
+										onerror={(e) => { (e.currentTarget as HTMLImageElement).style.display = 'none'; }}
+									/>
+									<div class="absolute inset-0 flex h-full w-full items-center justify-center bg-gradient-to-br from-surface-raised to-border">
+										{#if coll.type === 'image:photo'}
+											<svg class="text-text-muted h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+												<path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M2.25 15.75l5.159-5.159a2.25 2.25 0 013.182 0l5.159 5.159m-1.5-1.5l1.409-1.409a2.25 2.25 0 013.182 0l2.909 2.909m-18 3.75h16.5a1.5 1.5 0 001.5-1.5V6a1.5 1.5 0 00-1.5-1.5H3.75A1.5 1.5 0 002.25 6v12a1.5 1.5 0 001.5 1.5zm10.5-11.25h.008v.008h-.008V8.25zm.375 0a.375.375 0 11-.75 0 .375.375 0 01.75 0z" />
+											</svg>
+										{:else if coll.type.startsWith('audio:')}
+											<svg class="text-text-muted h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+												<path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M9 19V6l12-3v13M9 19c0 1.105-1.343 2-3 2s-3-.895-3-2 1.343-2 3-2 3 .895 3 2zm12-3c0 1.105-1.343 2-3 2s-3-.895-3-2 1.343-2 3-2 3 .895 3 2zM9 10l12-3" />
+											</svg>
+										{:else if coll.type === 'video:movie'}
+											<svg class="text-text-muted h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+												<path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M3.375 19.5h17.25m-17.25 0a1.125 1.125 0 01-1.125-1.125M3.375 19.5h1.5C5.496 19.5 6 18.996 6 18.375m-3.75.125V6.375m0 0A1.125 1.125 0 013.375 5.25h17.25a1.125 1.125 0 011.125 1.125M3.375 6.375v12m17.25-12v12a1.125 1.125 0 01-1.125 1.125M18 6.375v12" />
+											</svg>
+										{:else}
+											<svg class="text-text-muted h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+												<path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M2.25 12.75V12A2.25 2.25 0 014.5 9.75h15A2.25 2.25 0 0121.75 12v.75m-8.69-6.44l-2.12-2.12a1.5 1.5 0 00-1.061-.44H4.5A2.25 2.25 0 002.25 6v12a2.25 2.25 0 002.25 2.25h15A2.25 2.25 0 0021.75 18V9a2.25 2.25 0 00-2.25-2.25h-5.379a1.5 1.5 0 01-1.06-.44z" />
+											</svg>
+										{/if}
+									</div>
+								</div>
+							{/key}
+							<p class="text-text-primary truncate text-sm font-medium">{coll.name}</p>
+							<p class="text-text-muted text-xs">{coll.type}</p>
+						</div>
+						<div class="absolute top-2 right-2 z-10" onclick={(e) => e.stopPropagation()}>
+							<AdminCollectionMenu collection={coll} />
+						</div>
+					</div>
 				{/each}
 			</div>
 		{/if}
@@ -330,7 +258,7 @@
 						<div class="flex gap-2">
 							<button
 								class="border-border text-text-muted hover:text-text-primary rounded border px-2 py-1 text-xs"
-								onclick={() => showToast('Change password is not yet implemented.')}
+								onclick={() => toastStore.show('Change password is not yet implemented.')}
 							>
 								Change Password
 							</button>
@@ -436,7 +364,7 @@
 			<form onsubmit={(e) => { e.preventDefault(); handleCreateCollection(); }} class="space-y-4">
 				<div>
 					<label class="text-text-secondary mb-1 block text-sm">Directory</label>
-					<PathBrowser bind:selectedPath={newCollPath} />
+					<PathBrowser bind:selectedPath={newCollPath} bind:selectedType={newCollType} />
 				</div>
 				<div>
 					<label for="coll-name" class="text-text-secondary mb-1 block text-sm">Name</label>
@@ -502,87 +430,6 @@
 	</div>
 {/if}
 
-<!-- Collection Actions Popup -->
-{#if showCollectionActions && selectedCollection}
-	<div class="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4">
-		<div class="bg-surface w-full max-w-sm rounded-xl p-6">
-			<h3 class="text-text-primary mb-4 text-lg font-semibold">{selectedCollection.name}</h3>
-			<div class="space-y-2">
-				<button
-					class="border-border hover:border-accent w-full rounded-lg border px-4 py-3 text-left text-sm"
-					onclick={handleRescan}
-				>
-					🔄 Rescan Library
-				</button>
-				<button
-					class="border-border hover:border-accent w-full rounded-lg border px-4 py-3 text-left text-sm disabled:opacity-50"
-					disabled={refreshMetadataLoading}
-					onclick={handleRefreshMetadata}
-				>
-					🔃 Refresh Metadata
-				</button>
-				<button
-					class="border-border hover:border-accent w-full rounded-lg border px-4 py-3 text-left text-sm"
-					onclick={() => openGrantAccess(selectedCollection!)}
-				>
-					👥 Grant Access
-				</button>
-				<button
-					class="border-error text-error w-full rounded-lg border px-4 py-3 text-left text-sm"
-					onclick={() => { confirmDeleteCollection = selectedCollection; showCollectionActions = false; }}
-				>
-					🗑 Delete Collection
-				</button>
-			</div>
-			<button
-				class="text-text-muted mt-4 w-full text-sm"
-				onclick={() => (showCollectionActions = false)}
-			>
-				Cancel
-			</button>
-		</div>
-	</div>
-{/if}
-
-<!-- Grant Access Popup -->
-{#if showGrantAccess && grantAccessCollection}
-	<div class="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4">
-		<div class="bg-surface flex h-full max-h-[600px] w-full max-w-sm flex-col rounded-xl p-6">
-			<h3 class="text-text-primary mb-4 text-lg font-semibold">
-				Grant Access — {grantAccessCollection.name}
-			</h3>
-			<div class="flex-1 overflow-y-auto space-y-2">
-				{#each $usersQuery.data ?? [] as user (user.id)}
-					<label class="bg-surface-raised border-border flex items-center gap-3 rounded-lg border px-4 py-3 cursor-pointer">
-						<input
-							type="checkbox"
-							checked={grantAccessSelected.has(user.id)}
-							onchange={() => toggleUser(user.id)}
-							class="accent-accent"
-						/>
-						<span class="text-text-primary text-sm">{user.name}</span>
-					</label>
-				{/each}
-			</div>
-			<div class="flex gap-3 pt-4">
-				<button
-					class="border-border text-text-secondary flex-1 rounded-lg border px-4 py-2 text-sm"
-					onclick={() => (showGrantAccess = false)}
-				>
-					Cancel
-				</button>
-				<button
-					class="bg-accent hover:bg-accent-hover flex-1 rounded-lg px-4 py-2 text-sm font-medium text-white disabled:opacity-50"
-					disabled={grantAccessLoading}
-					onclick={saveGrantAccess}
-				>
-					{grantAccessLoading ? 'Saving…' : 'Save'}
-				</button>
-			</div>
-		</div>
-	</div>
-{/if}
-
 <!-- Create User Popup -->
 {#if showCreateUser}
 	<div class="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4">
@@ -611,6 +458,10 @@
 					<input type="checkbox" bind:checked={newUserIsAdmin} class="accent-accent" />
 					<span class="text-text-secondary text-sm">Administrator</span>
 				</label>
+				<label class="flex items-center gap-2 cursor-pointer">
+					<input type="checkbox" bind:checked={newUserLocalAccessOnly} class="accent-accent" />
+					<span class="text-text-secondary text-sm">Only allow access on local network</span>
+				</label>
 				{#if createUserError}
 					<p class="text-error text-sm">{createUserError}</p>
 				{/if}
@@ -635,18 +486,6 @@
 	</div>
 {/if}
 
-<!-- Delete Collection Confirm -->
-{#if confirmDeleteCollection}
-	<ConfirmPopup
-		title="Delete Collection"
-		message="This will remove the collection from Bokeh. No files will be deleted from your media library. This action cannot be undone."
-		confirmLabel="Delete"
-		destructive={true}
-		onConfirm={handleDeleteCollection}
-		onCancel={() => (confirmDeleteCollection = null)}
-	/>
-{/if}
-
 <!-- Delete User Confirm -->
 {#if confirmDeleteUserId !== null}
 	<ConfirmPopup
@@ -659,4 +498,3 @@
 	/>
 {/if}
 
-<Toast message={toastMessage} visible={toastVisible} />

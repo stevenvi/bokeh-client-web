@@ -44,7 +44,7 @@
 		if (ps.type !== 'video' || !ps.visible) return 'hidden';
 		if (ps.isFullPlayer) return 'fixed inset-0 w-full h-full z-[48] bg-black object-contain';
 		// Mini mode: float in the bottom bar area, left side
-		return 'fixed bottom-0 left-0 h-[72px] aspect-video z-[51] bg-black object-contain';
+		return 'fixed bottom-0 left-0 h-[60px] aspect-video z-[51] bg-black object-contain';
 	});
 
 	// ── Time formatting ──
@@ -295,7 +295,7 @@
 
 <!-- Video loading spinner (mini player thumbnail) -->
 {#if ps.type === 'video' && showMiniPlayer && videoLoading}
-	<div class="fixed bottom-0 left-0 h-[72px] aspect-video z-[52] flex items-center justify-center bg-black/40">
+	<div class="fixed bottom-0 left-0 h-[60px] aspect-video z-[52] flex items-center justify-center bg-black/40">
 		<svg class="h-6 w-6 animate-spin text-white/80" fill="none" viewBox="0 0 24 24">
 			<circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="3"></circle>
 			<path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"></path>
@@ -415,7 +415,7 @@
 {#if showMiniPlayer}
 	<div
 		class="fixed inset-x-0 bottom-0 z-50 bg-surface-raised border-t border-border shadow-lg pb-safe"
-		class:pl-[134px]={ps.type === 'video'}
+		class:pl-[110px]={ps.type === 'video'}
 	>
 		<!-- Progress bar (thin line above controls) -->
 		<!-- svelte-ignore a11y_click_events_have_key_events -->

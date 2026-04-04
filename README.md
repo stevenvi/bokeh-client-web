@@ -1,24 +1,24 @@
 # Bokeh Web Client
 
-SvelteKit SPA / PWA for the Bokeh Media Server. Works in any modern browser and can be installed as a home-screen app on iOS and Android.
+SvelteKit SPA / PWA for the [Bokeh Media Server](https://github.com/stevenvi/bokeh-mediaserver). 
+Works in any modern browser and can be installed as a home-screen app on iOS and Android.
 
 ## Prerequisites
 
-- Node.js 20+
-- The Bokeh server running (see `server/` for setup)
+- [Node.js](https://nodejs.org/) 20+
+- [Bokeh Media Server](https://github.com/stevenvi/bokeh-mediaserver) which you operate yourself
 
 ## Development
 
 ### 1. Install dependencies
 
 ```bash
-cd client-web
 npm install
 ```
 
 ### 2. Start the server
 
-In a separate terminal, start the Go server with CORS enabled for the dev origin:
+In a separate terminal, start the Boken Media Server with CORS enabled for the dev origin:
 
 ```bash
 cd server

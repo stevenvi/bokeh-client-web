@@ -10,6 +10,6 @@
 	<title>Album — Bokeh</title>
 </svelte:head>
 
-<main class="min-h-dvh bg-bg">
+<main class="min-h-dvh">
 	<AlbumTrackListView {albumId} {rootCollectionId} />
 </main>

@@ -6,6 +6,11 @@
 	import { navigationStore } from '$lib/stores/navigation';
 	import { mediaPlayer } from '$lib/stores/mediaPlayer';
 	import AlbumTile from './AlbumTile.svelte';
+	import AdminTileMenu from './AdminTileMenu.svelte';
+	import { authStore } from '$lib/stores/auth';
+	import { adminUploadArtistImage } from '$lib/api/admin';
+	import { artistImageBust, bumpArtistImageBust } from '$lib/stores/coverBust';
+	import { toastStore } from '$lib/stores/toast';
 
 	interface Props {
 		artistId: number;
@@ -65,22 +70,31 @@
 
 		<!-- Artist header -->
 		<div class="flex items-center gap-4 px-4 py-6">
-			<div class="bg-surface-raised relative h-24 w-24 flex-shrink-0 overflow-hidden rounded-full">
-				{#if !artistImageError}
-					<img
-						src={artistImageUrl(artist.id)}
-						alt=""
-						class="h-full w-full object-cover transition-opacity duration-300"
-						class:opacity-0={!artistImageLoaded}
-						onload={() => (artistImageLoaded = true)}
-						onerror={() => (artistImageError = true)}
-					/>
-				{/if}
-				{#if !artistImageLoaded || artistImageError}
-					<div class="absolute inset-0 flex items-center justify-center bg-gradient-to-br from-surface-raised to-border">
-						<svg class="text-text-muted h-10 w-10" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-							<path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M9 19V6l12-3v13M9 19c0 1.105-1.343 2-3 2s-3-.895-3-2 1.343-2 3-2 3 .895 3 2zm12-3c0 1.105-1.343 2-3 2s-3-.895-3-2 1.343-2 3-2 3 .895 3 2zM9 10l12-3" />
-						</svg>
+			<div class="relative h-24 w-24 flex-shrink-0">
+				<div class="bg-surface-raised h-full w-full overflow-hidden rounded-full">
+					{#if !artistImageError}
+						<img
+							src={artistImageUrl(artist.id) + ($artistImageBust[artist.id] ? `?v=${$artistImageBust[artist.id]}` : '')}
+							alt=""
+							class="h-full w-full object-cover transition-opacity duration-300"
+							class:opacity-0={!artistImageLoaded}
+							onload={() => (artistImageLoaded = true)}
+							onerror={() => (artistImageError = true)}
+						/>
+					{/if}
+					{#if !artistImageLoaded || artistImageError}
+						<div class="absolute inset-0 flex items-center justify-center bg-gradient-to-br from-surface-raised to-border">
+							<svg class="text-text-muted h-10 w-10" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+								<path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M9 19V6l12-3v13M9 19c0 1.105-1.343 2-3 2s-3-.895-3-2 1.343-2 3-2 3 .895 3 2zm12-3c0 1.105-1.343 2-3 2s-3-.895-3-2 1.343-2 3-2 3 .895 3 2zM9 10l12-3" />
+							</svg>
+						</div>
+					{/if}
+				</div>
+				{#if $authStore?.isAdmin}
+					<div class="absolute top-0 right-0 z-10">
+						<AdminTileMenu items={[
+							{ emoji: '🖼', label: 'Upload Image', fileAccept: 'image/*', onFile: async (f) => { await adminUploadArtistImage(artist.id, f); artistImageError = false; artistImageLoaded = false; bumpArtistImageBust(artist.id); toastStore.show('Artist image updated.'); } }
+						]} />
 					</div>
 				{/if}
 			</div>
