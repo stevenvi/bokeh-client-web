@@ -41,6 +41,7 @@ export function artistImageUrl(id: number): string {
 	return `${base()}/images/artists/${id}/cover`;
 }
 
-export function albumCoverUrl(albumId: number): string {
-	return `${base()}/images/albums/${albumId}/cover`;
+export function albumCoverUrl(albumId: number, bust?: number): string {
+	const url = `${base()}/images/albums/${albumId}/cover`;
+	return bust ? `${url}?v=${bust}` : url;
 }

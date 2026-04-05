@@ -128,8 +128,7 @@
 						{#each tracks as track, i}
 							{@const globalIndex = data.tracks.indexOf(track)}
 							<button
-								class="flex w-full items-center gap-3 px-2 py-2.5 text-left transition-colors hover:bg-surface-raised"
-								class:bg-surface={globalIndex % 2 === 0}
+								class="flex w-full items-center gap-3 px-2 py-2.5 text-left transition-colors hover:bg-surface-raised {globalIndex % 2 === 0 ? 'bg-[rgb(26_26_26/0.25)]' : ''}"
 								onclick={() => playTrack(globalIndex)}
 							>
 								<span class="text-text-muted w-6 text-right text-sm tabular-nums">

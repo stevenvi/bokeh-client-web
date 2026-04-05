@@ -109,7 +109,7 @@
 					{#if $authStore?.isAdmin}
 						<div class="absolute top-1 right-1 z-10" onclick={(e) => e.stopPropagation()}>
 							<AdminTileMenu items={[
-								{ emoji: '🔃', label: 'Refresh Metadata', action: async () => { const r = await adminTriggerScan(collection.id, true); toastStore.show(`Metadata refresh job #${r.job_id} queued.`); } },
+								{ emoji: '🔃', label: 'Refresh Metadata', action: async () => { const r = await adminTriggerScan(collection.id, 'metadata'); toastStore.show(`Metadata refresh job #${r.job_id} queued.`); } },
 								{ emoji: '🖼', label: 'Upload Image', fileAccept: 'image/*', onFile: async (f) => { await adminUploadVideoCover(item.id, f); bumpVideoCoverBust(item.id); toastStore.show('Image updated.'); } }
 							]} />
 						</div>

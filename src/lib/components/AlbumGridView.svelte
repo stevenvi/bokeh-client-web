@@ -54,7 +54,7 @@
 							<div class="absolute top-1 right-1 z-10" onclick={(e) => e.stopPropagation()}>
 								<AdminTileMenu items={[
 									{ emoji: '🔄', label: 'Rescan Library', action: async () => { const r = await adminTriggerScan(child.id); toastStore.show(`Scan job #${r.job_id} queued.`); } },
-									{ emoji: '🔃', label: 'Refresh Metadata', action: async () => { const r = await adminTriggerScan(child.id, true); toastStore.show(`Metadata refresh job #${r.job_id} queued.`); } },
+									{ emoji: '🔃', label: 'Refresh Metadata', action: async () => { const r = await adminTriggerScan(child.id, 'metadata'); toastStore.show(`Metadata refresh job #${r.job_id} queued.`); } },
 									{ emoji: '🖼', label: 'Upload Cover Image', fileAccept: 'image/*', onFile: async (f) => { await adminUploadCollectionCover(child.id, f); bumpCoverBust(child.id); toastStore.show('Cover updated.'); } }
 								]} />
 							</div>

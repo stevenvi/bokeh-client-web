@@ -30,34 +30,46 @@
 		}
 	});
 
-	onMount(async () => {
+	onMount(() => {
+		function handleKeyDown(e: KeyboardEvent) {
+			const isReload = e.key === 'F5' || ((e.ctrlKey || e.metaKey) && e.key === 'r');
+			if (!isReload) return;
+			e.preventDefault();
+			queryClient.invalidateQueries();
+		}
+		document.addEventListener('keydown', handleKeyDown);
+
 		// If we have a saved server URL, attempt to restore the session.
 		// First try /auth/me (access cookie may still be valid), then fall back
 		// to /auth/refresh (refresh cookie lasts 90 days).
 		if ($appStore.state === 'logging-in') {
-			try {
-				let me: Awaited<ReturnType<typeof getMe>>;
+			(async () => {
 				try {
-					me = await getMe();
+					let me: Awaited<ReturnType<typeof getMe>>;
+					try {
+						me = await getMe();
+					} catch {
+						// Access token expired — try refreshing with the 90-day refresh cookie.
+						const deviceUUID = getOrCreateDeviceUUID();
+						await refresh(deviceUUID);
+						// Refresh succeeded — now getMe will work with the new access cookie.
+						me = await getMe();
+					}
+					authStore.setClaims({
+						userId: me.id,
+						deviceId: me.device_id,
+						isAdmin: me.is_admin,
+						expiresAt: 0
+					});
+					appStore.setAuthenticated();
+					scheduleRefresh(null);
 				} catch {
-					// Access token expired — try refreshing with the 90-day refresh cookie.
-					const deviceUUID = getOrCreateDeviceUUID();
-					const res = await refresh(deviceUUID);
-					// Refresh succeeded — now getMe will work with the new access cookie.
-					me = await getMe();
+					// Both access and refresh tokens are invalid — show login screen.
 				}
-				authStore.setClaims({
-					userId: me.id,
-					deviceId: me.device_id,
-					isAdmin: me.is_admin,
-					expiresAt: 0
-				});
-				appStore.setAuthenticated();
-				scheduleRefresh(null);
-			} catch {
-				// Both access and refresh tokens are invalid — show login screen.
-			}
+			})();
 		}
+
+		return () => document.removeEventListener('keydown', handleKeyDown);
 	});
 </script>
 

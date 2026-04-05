@@ -5,14 +5,23 @@
 		albumId: number;
 		name: string;
 		year: number | null;
+		bust?: number;
 		onClickTitle?: () => void;
 		onClickImage?: () => void;
 	}
 
-	let { albumId, name, year, onClickTitle, onClickImage }: Props = $props();
+	let { albumId, name, year, bust, onClickTitle, onClickImage }: Props = $props();
 	let coverLoaded = $state(false);
 	let coverError = $state(false);
 	let hovered = $state(false);
+
+	$effect(() => {
+		// Reset image state when bust changes so the new cover is fetched
+		if (bust !== undefined) {
+			coverLoaded = false;
+			coverError = false;
+		}
+	});
 </script>
 
 <div
@@ -29,7 +38,7 @@
 	>
 		{#if !coverError}
 			<img
-				src={albumCoverUrl(albumId)}
+				src={albumCoverUrl(albumId, bust)}
 				alt=""
 				class="absolute inset-0 h-full w-full object-cover transition-opacity duration-300"
 				class:opacity-0={!coverLoaded}

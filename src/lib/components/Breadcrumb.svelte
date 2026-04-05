@@ -15,7 +15,7 @@
 
 <nav class="hidden items-center gap-1 px-4 py-3 md:flex" aria-label="Breadcrumb">
 	<button
-		class="text-text-muted hover:text-text-primary flex items-center gap-1 text-sm transition-colors"
+		class="text-text-secondary hover:text-text-primary flex items-center gap-1 text-sm transition-colors"
 		onclick={goHome}
 	>
 		<svg class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -25,7 +25,7 @@
 	</button>
 
 	{#each $navigationStore as entry (entry.id)}
-		<svg class="text-text-muted h-4 w-4 flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+		<svg class="text-text-secondary h-4 w-4 flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor">
 			<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8.25 4.5l7.5 7.5-7.5 7.5" />
 		</svg>
 		<button

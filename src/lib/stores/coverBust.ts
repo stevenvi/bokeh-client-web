@@ -20,3 +20,10 @@ export const artistImageBust = writable<Record<number, number>>({});
 export function bumpArtistImageBust(artistId: number) {
 	artistImageBust.set({ ...get(artistImageBust), [artistId]: Date.now() });
 }
+
+/** Maps albumId → cache-bust timestamp for album covers. */
+export const albumCoverBust = writable<Record<number, number>>({});
+
+export function bumpAlbumCoverBust(albumId: number) {
+	albumCoverBust.set({ ...get(albumCoverBust), [albumId]: Date.now() });
+}

@@ -22,9 +22,8 @@ export function adminDeleteCollection(id: number): Promise<void> {
 	return apiFetch<void>(`/api/v1/admin/collections/${id}`, { method: 'DELETE' });
 }
 
-export function adminTriggerScan(id: number, force = false): Promise<{ job_id: number }> {
-	const qs = force ? '?force=true' : '';
-	return apiFetch<{ job_id: number }>(`/api/v1/admin/collections/${id}/scan${qs}`, {
+export function adminTriggerScan(id: number, type: 'filesystem' | 'metadata' = 'filesystem'): Promise<{ job_id: number }> {
+	return apiFetch<{ job_id: number }>(`/api/v1/admin/collections/${id}/scan?type=${type}`, {
 		method: 'POST'
 	});
 }
@@ -45,6 +44,16 @@ export function adminUploadArtistImage(id: number, file: File): Promise<void> {
 	const form = new FormData();
 	form.append('image', file);
 	return apiFetchForm<void>(`/api/v1/admin/artists/${id}/image`, form);
+}
+
+export function adminUploadAlbumCover(albumId: number, file: File): Promise<void> {
+	const form = new FormData();
+	form.append('image', file);
+	return apiFetchForm<void>(`/api/v1/admin/albums/${albumId}/cover`, form);
+}
+
+export function adminDeleteAlbumCover(albumId: number): Promise<void> {
+	return apiFetch<void>(`/api/v1/admin/albums/${albumId}/cover`, { method: 'DELETE' });
 }
 
 export function adminDeleteDerivatives(id: number): Promise<{ deleted: number }> {

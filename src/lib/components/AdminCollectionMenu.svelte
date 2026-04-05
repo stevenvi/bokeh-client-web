@@ -81,7 +81,7 @@
 
 <AdminTileMenu items={[
 	{ emoji: '🔄', label: 'Rescan Library', action: async () => { const r = await adminTriggerScan(collection.id); toastStore.show(`Scan job #${r.job_id} queued.`); } },
-	{ emoji: '🔃', label: 'Refresh Metadata', action: async () => { const r = await adminTriggerScan(collection.id, true); toastStore.show(`Metadata refresh job #${r.job_id} queued.`); } },
+	{ emoji: '🔃', label: 'Refresh Metadata', action: async () => { const r = await adminTriggerScan(collection.id, 'metadata'); toastStore.show(`Metadata refresh job #${r.job_id} queued.`); } },
 	{ emoji: '👥', label: 'Grant Access', action: () => openGrantAccess() },
 	{ emoji: '🖼', label: 'Upload Cover Image', fileAccept: 'image/*', onFile: async (f) => { await adminUploadCollectionCover(collection.id, f); bumpCoverBust(collection.id); toastStore.show('Cover updated.'); } },
 	{ emoji: '🗑', label: 'Delete Collection', action: () => { confirmDelete = true; } }

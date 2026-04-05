@@ -12,8 +12,11 @@
 		adminOrphanCleanup,
 		adminIntegrityCheck,
 		adminDeviceCleanup,
-		adminCoverCycle
+		adminCoverCycle,
+		adminListCollectionUsers,
+		adminSetCollectionUsers
 	} from '$lib/api/admin';
+	import type { AdminUser } from '$lib/types';
 	import { collectionCoverUrl } from '$lib/api/media';
 	import { coverBustStore } from '$lib/stores/coverBust';
 	import { toastStore } from '$lib/stores/toast';
@@ -97,10 +100,57 @@
 			newCollType = 'image:photo';
 			showCreateCollection = false;
 			queryClient.invalidateQueries({ queryKey: ['admin-collections'] });
+			openGrantAccess(res.id, name);
 		} catch (e: unknown) {
 			createCollError = e instanceof Error ? e.message : 'Failed to create collection.'; // shown inline
 		} finally {
 			createCollLoading = false;
+		}
+	}
+
+	// ── Grant Access (post-creation) ──────────────────────────────────────────
+	let showGrantAccess = $state(false);
+	let grantAccessCollectionId = $state<number | null>(null);
+	let grantAccessCollectionName = $state('');
+	let grantAccessUsers = $state<AdminUser[]>([]);
+	let grantAccessSelected = $state<Set<number>>(new Set());
+	let grantAccessLoading = $state(false);
+
+	async function openGrantAccess(collId: number, collName: string) {
+		grantAccessCollectionId = collId;
+		grantAccessCollectionName = collName;
+		grantAccessSelected = new Set();
+		showGrantAccess = true;
+		try {
+			const [users, currentIds] = await Promise.all([
+				adminListUsers(),
+				adminListCollectionUsers(collId)
+			]);
+			grantAccessUsers = users;
+			grantAccessSelected = new Set(currentIds);
+		} catch {
+			grantAccessUsers = [];
+		}
+	}
+
+	function toggleGrantUser(userId: number) {
+		const next = new Set(grantAccessSelected);
+		if (next.has(userId)) next.delete(userId);
+		else next.add(userId);
+		grantAccessSelected = next;
+	}
+
+	async function saveGrantAccess() {
+		if (grantAccessCollectionId === null) return;
+		grantAccessLoading = true;
+		try {
+			await adminSetCollectionUsers(grantAccessCollectionId, [...grantAccessSelected]);
+			toastStore.show('Access permissions saved.');
+			showGrantAccess = false;
+		} catch (e: unknown) {
+			toastStore.show(e instanceof Error ? e.message : 'Failed to save permissions.');
+		} finally {
+			grantAccessLoading = false;
 		}
 	}
 
@@ -482,6 +532,44 @@
 					</button>
 				</div>
 			</form>
+		</div>
+	</div>
+{/if}
+
+<!-- Grant Access (post-creation) -->
+{#if showGrantAccess}
+	<div class="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4">
+		<div class="bg-surface flex h-full max-h-[600px] w-full max-w-sm flex-col rounded-xl p-6">
+			<h3 class="text-text-primary mb-1 text-lg font-semibold">Grant Access</h3>
+			<p class="text-text-secondary mb-4 text-sm">{grantAccessCollectionName}</p>
+			<div class="flex-1 space-y-2 overflow-y-auto">
+				{#each grantAccessUsers as user (user.id)}
+					<label class="bg-surface-raised border-border flex cursor-pointer items-center gap-3 rounded-lg border px-4 py-3">
+						<input
+							type="checkbox"
+							checked={grantAccessSelected.has(user.id)}
+							onchange={() => toggleGrantUser(user.id)}
+							class="accent-accent"
+						/>
+						<span class="text-text-primary text-sm">{user.name}</span>
+					</label>
+				{/each}
+			</div>
+			<div class="flex gap-3 pt-4">
+				<button
+					class="border-border text-text-secondary flex-1 rounded-lg border px-4 py-2 text-sm"
+					onclick={() => (showGrantAccess = false)}
+				>
+					Skip
+				</button>
+				<button
+					class="bg-accent hover:bg-accent-hover flex-1 rounded-lg px-4 py-2 text-sm font-medium text-white disabled:opacity-50"
+					disabled={grantAccessLoading}
+					onclick={saveGrantAccess}
+				>
+					{grantAccessLoading ? 'Saving…' : 'Save'}
+				</button>
+			</div>
 		</div>
 	</div>
 {/if}

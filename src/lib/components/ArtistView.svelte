@@ -8,8 +8,8 @@
 	import AlbumTile from './AlbumTile.svelte';
 	import AdminTileMenu from './AdminTileMenu.svelte';
 	import { authStore } from '$lib/stores/auth';
-	import { adminUploadArtistImage } from '$lib/api/admin';
-	import { artistImageBust, bumpArtistImageBust } from '$lib/stores/coverBust';
+	import { adminUploadArtistImage, adminUploadAlbumCover, adminDeleteAlbumCover } from '$lib/api/admin';
+	import { artistImageBust, bumpArtistImageBust, albumCoverBust, bumpAlbumCoverBust } from '$lib/stores/coverBust';
 	import { toastStore } from '$lib/stores/toast';
 
 	interface Props {
@@ -113,13 +113,24 @@
 			{:else}
 				<div class="grid grid-cols-2 gap-4 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6">
 					{#each albums as album (album.album_id)}
-						<AlbumTile
-							albumId={album.album_id}
-							name={album.name}
-							year={album.year}
-							onClickTitle={() => openAlbum(album.album_id, album.name)}
-							onClickImage={() => playAlbum(album.album_id)}
-						/>
+						<div class="relative">
+							<AlbumTile
+								albumId={album.album_id}
+								name={album.name}
+								year={album.year}
+								bust={$albumCoverBust[album.album_id]}
+								onClickTitle={() => openAlbum(album.album_id, album.name)}
+								onClickImage={() => playAlbum(album.album_id)}
+							/>
+							{#if $authStore?.isAdmin}
+								<div class="absolute top-1 right-1 z-10" onclick={(e) => e.stopPropagation()}>
+									<AdminTileMenu items={[
+										{ emoji: '🖼', label: 'Upload Cover', fileAccept: 'image/*', onFile: async (f) => { await adminUploadAlbumCover(album.album_id, f); bumpAlbumCoverBust(album.album_id); toastStore.show('Album cover updated.'); } },
+										{ emoji: '🗑', label: 'Remove Cover', action: async () => { await adminDeleteAlbumCover(album.album_id); bumpAlbumCoverBust(album.album_id); toastStore.show('Album cover removed.'); } }
+									]} />
+								</div>
+							{/if}
+						</div>
 					{/each}
 				</div>
 			{/if}
