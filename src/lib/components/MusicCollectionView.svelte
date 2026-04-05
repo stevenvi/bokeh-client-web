@@ -1,6 +1,6 @@
 <script lang="ts">
 	import { createQuery, createInfiniteQuery } from '@tanstack/svelte-query';
-	import { goto } from '$app/navigation';
+	import { goto, afterNavigate } from '$app/navigation';
 	import { listArtists } from '$lib/api/music';
 	import { navigationStore } from '$lib/stores/navigation';
 	import { mediaPlayer } from '$lib/stores/mediaPlayer';
@@ -59,7 +59,15 @@
 		return () => observer.disconnect();
 	});
 
+	afterNavigate(() => {
+		const saved = navigationStore.getScrollPosition(collectionId);
+		if (saved > 0) {
+			window.scrollTo({ top: saved, behavior: 'instant' });
+		}
+	});
+
 	function openArtist(artistId: number, artistName: string) {
+		navigationStore.saveScrollPosition(collectionId, window.scrollY);
 		navigationStore.push({ id: artistId, name: artistName, path: `/collection/${collectionId}/artist/${artistId}` });
 		goto(`/collection/${collectionId}/artist/${artistId}`);
 	}
