@@ -3,7 +3,7 @@
 	import AdminTileMenu from './AdminTileMenu.svelte';
 	import ConfirmPopup from './ConfirmPopup.svelte';
 	import {
-		adminTriggerScan,
+		adminCreateJob,
 		adminUploadCollectionCover,
 		adminDeleteCollection,
 		adminListCollectionUsers,
@@ -80,8 +80,8 @@
 </script>
 
 <AdminTileMenu items={[
-	{ emoji: '🔄', label: 'Rescan Library', action: async () => { const r = await adminTriggerScan(collection.id); toastStore.show(`Scan job #${r.job_id} queued.`); } },
-	{ emoji: '🔃', label: 'Refresh Metadata', action: async () => { const r = await adminTriggerScan(collection.id, 'metadata'); toastStore.show(`Metadata refresh job #${r.job_id} queued.`); } },
+	{ emoji: '🔄', label: 'Rescan Library', action: async () => { const r = await adminCreateJob('collection_scan', collection.id, 'collection'); toastStore.show(`Scan job #${r.id} queued.`); } },
+	{ emoji: '🖼', label: 'Rescan Thumbnails', action: async () => { const r = await adminCreateJob('thumbnail_scan', collection.id, 'collection'); toastStore.show(`Thumbnail scan job #${r.id} queued.`); } },
 	{ emoji: '👥', label: 'Grant Access', action: () => openGrantAccess() },
 	{ emoji: '🖼', label: 'Upload Cover Image', fileAccept: 'image/*', onFile: async (f) => { await adminUploadCollectionCover(collection.id, f); bumpCoverBust(collection.id); toastStore.show('Cover updated.'); } },
 	{ emoji: '🗑', label: 'Delete Collection', action: () => { confirmDelete = true; } }

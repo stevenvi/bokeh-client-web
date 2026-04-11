@@ -22,10 +22,24 @@ export function adminDeleteCollection(id: number): Promise<void> {
 	return apiFetch<void>(`/api/v1/admin/collections/${id}`, { method: 'DELETE' });
 }
 
-export function adminTriggerScan(id: number, type: 'filesystem' | 'metadata' = 'filesystem'): Promise<{ job_id: number }> {
-	return apiFetch<{ job_id: number }>(`/api/v1/admin/collections/${id}/scan?type=${type}`, {
-		method: 'POST'
+export function adminCreateJob(type: string, relatedId?: number, relatedType?: string): Promise<Job> {
+	return apiFetch<Job>('/api/v1/admin/jobs', {
+		method: 'POST',
+		body: JSON.stringify({
+			type,
+			...(relatedId !== undefined && { related_id: relatedId }),
+			...(relatedType !== undefined && { related_type: relatedType })
+		})
 	});
+}
+
+export function adminListJobs(params?: { inactive?: boolean; page?: number; limit?: number }): Promise<{ jobs: Job[]; total: number; page: number; limit: number }> {
+	const q = new URLSearchParams();
+	if (params?.inactive) q.set('inactive', 'true');
+	if (params?.page) q.set('page', String(params.page));
+	if (params?.limit) q.set('limit', String(params.limit));
+	const qs = q.toString();
+	return apiFetch(`/api/v1/admin/jobs${qs ? '?' + qs : ''}`);
 }
 
 export function adminUploadCollectionCover(id: number, file: File): Promise<void> {
@@ -131,30 +145,4 @@ export function adminListDirectories(path: string): Promise<DirectoryEntry[]> {
 		? `/api/v1/admin/directories/${path.split('/').map(encodeURIComponent).join('/')}`
 		: '/api/v1/admin/directories';
 	return apiFetch<DirectoryEntry[]>(url);
-}
-
-// ── Maintenance ───────────────────────────────────────────────────────────────
-
-export function adminOrphanCleanup(): Promise<{ job_id: number }> {
-	return apiFetch<{ job_id: number }>('/api/v1/admin/maintenance/orphan-cleanup', {
-		method: 'POST'
-	});
-}
-
-export function adminIntegrityCheck(): Promise<{ job_id: number }> {
-	return apiFetch<{ job_id: number }>('/api/v1/admin/maintenance/integrity-check', {
-		method: 'POST'
-	});
-}
-
-export function adminDeviceCleanup(): Promise<{ job_id: number }> {
-	return apiFetch<{ job_id: number }>('/api/v1/admin/maintenance/device-cleanup', {
-		method: 'POST'
-	});
-}
-
-export function adminCoverCycle(): Promise<{ job_id: number }> {
-	return apiFetch<{ job_id: number }>('/api/v1/admin/maintenance/cover-cycle', {
-		method: 'POST'
-	});
 }

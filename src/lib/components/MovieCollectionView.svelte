@@ -7,7 +7,7 @@
 	import type { CollectionView, MediaItemView } from '$lib/types';
 	import AdminTileMenu from './AdminTileMenu.svelte';
 	import { authStore } from '$lib/stores/auth';
-	import { adminTriggerScan, adminUploadVideoCover } from '$lib/api/admin';
+	import { adminCreateJob, adminUploadVideoCover } from '$lib/api/admin';
 	import { videoCoverBust, bumpVideoCoverBust } from '$lib/stores/coverBust';
 	import { toastStore } from '$lib/stores/toast';
 
@@ -109,7 +109,7 @@
 					{#if $authStore?.isAdmin}
 						<div class="absolute top-1 right-1 z-10" onclick={(e) => e.stopPropagation()}>
 							<AdminTileMenu items={[
-								{ emoji: '🔃', label: 'Refresh Metadata', action: async () => { const r = await adminTriggerScan(collection.id, 'metadata'); toastStore.show(`Metadata refresh job #${r.job_id} queued.`); } },
+								{ emoji: '🔃', label: 'Rescan Thumbnails', action: async () => { const r = await adminCreateJob('thumbnail_scan', collection.id, 'collection'); toastStore.show(`Thumbnail scan job #${r.id} queued.`); } },
 								{ emoji: '🖼', label: 'Upload Image', fileAccept: 'image/*', onFile: async (f) => { await adminUploadVideoCover(item.id, f); bumpVideoCoverBust(item.id); toastStore.show('Image updated.'); } }
 							]} />
 						</div>

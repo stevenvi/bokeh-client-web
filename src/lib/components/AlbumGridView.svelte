@@ -8,7 +8,7 @@
 	import MediaGrid from './MediaGrid.svelte';
 	import type { MediaItemView } from '$lib/types';
 	import { authStore } from '$lib/stores/auth';
-	import { adminTriggerScan, adminUploadCollectionCover } from '$lib/api/admin';
+	import { adminCreateJob, adminUploadCollectionCover } from '$lib/api/admin';
 	import { bumpCoverBust } from '$lib/stores/coverBust';
 	import { toastStore } from '$lib/stores/toast';
 
@@ -53,8 +53,8 @@
 						{#if $authStore?.isAdmin}
 							<div class="absolute top-1 right-1 z-10" onclick={(e) => e.stopPropagation()}>
 								<AdminTileMenu items={[
-									{ emoji: '🔄', label: 'Rescan Library', action: async () => { const r = await adminTriggerScan(child.id); toastStore.show(`Scan job #${r.job_id} queued.`); } },
-									{ emoji: '🔃', label: 'Refresh Metadata', action: async () => { const r = await adminTriggerScan(child.id, 'metadata'); toastStore.show(`Metadata refresh job #${r.job_id} queued.`); } },
+									{ emoji: '🔄', label: 'Rescan Library', action: async () => { const r = await adminCreateJob('collection_scan', child.id, 'collection'); toastStore.show(`Scan job #${r.id} queued.`); } },
+									{ emoji: '🖼', label: 'Rescan Thumbnails', action: async () => { const r = await adminCreateJob('thumbnail_scan', child.id, 'collection'); toastStore.show(`Thumbnail scan job #${r.id} queued.`); } },
 									{ emoji: '🖼', label: 'Upload Cover Image', fileAccept: 'image/*', onFile: async (f) => { await adminUploadCollectionCover(child.id, f); bumpCoverBust(child.id); toastStore.show('Cover updated.'); } }
 								]} />
 							</div>

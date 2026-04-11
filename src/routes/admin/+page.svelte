@@ -9,10 +9,8 @@
 		adminListUsers,
 		adminCreateUser,
 		adminDeleteUser,
-		adminOrphanCleanup,
-		adminIntegrityCheck,
-		adminDeviceCleanup,
-		adminCoverCycle,
+		adminCreateJob,
+		adminListJobs,
 		adminListCollectionUsers,
 		adminSetCollectionUsers
 	} from '$lib/api/admin';
@@ -48,6 +46,12 @@
 	const usersQuery = createQuery({
 		queryKey: ['admin-users'],
 		queryFn: adminListUsers
+	});
+
+	const jobsQuery = createQuery({
+		queryKey: ['admin-jobs'],
+		queryFn: () => adminListJobs(),
+		refetchInterval: 5000
 	});
 
 	// ── Create Collection ──────────────────────────────────────────────────────
@@ -204,10 +208,11 @@
 	}
 
 	// ── Maintenance ────────────────────────────────────────────────────────────
-	async function runMaintenance(fn: () => Promise<{ job_id: number }>, label: string) {
+	async function runMaintenance(type: string, label: string) {
 		try {
-			const res = await fn();
-			toastStore.show(`${label} queued as job #${res.job_id}.`);
+			const res = await adminCreateJob(type);
+			toastStore.show(`${label} queued as job #${res.id}.`);
+			queryClient.invalidateQueries({ queryKey: ['admin-jobs'] });
 		} catch (e: unknown) {
 			toastStore.show(e instanceof Error ? e.message : `Failed to run ${label}.`);
 		}
@@ -329,35 +334,97 @@
 	</section>
 
 	<!-- ── Job Management ────────────────────────────────────────── -->
-	<section class="bg-surface rounded-xl p-6">
+	<section class="bg-surface mb-8 rounded-xl p-6">
 		<h2 class="text-text-primary mb-4 text-lg font-semibold">Maintenance Jobs</h2>
 		<div class="flex flex-wrap gap-3">
 			<button
 				class="bg-surface-raised border-border hover:border-accent rounded-lg border px-4 py-2 text-sm"
-				onclick={() => runMaintenance(adminOrphanCleanup, 'Orphan Cleanup')}
+				onclick={() => runMaintenance('orphan_cleanup', 'Orphan Cleanup')}
 			>
 				Run Orphan Cleanup
 			</button>
 			<button
 				class="bg-surface-raised border-border hover:border-accent rounded-lg border px-4 py-2 text-sm"
-				onclick={() => runMaintenance(adminIntegrityCheck, 'Integrity Check')}
+				onclick={() => runMaintenance('integrity_check', 'Integrity Check')}
 			>
 				Run Integrity Check
 			</button>
 			<button
 				class="bg-surface-raised border-border hover:border-accent rounded-lg border px-4 py-2 text-sm"
-				onclick={() => runMaintenance(adminDeviceCleanup, 'Device Cleanup')}
+				onclick={() => runMaintenance('device_cleanup', 'Device Cleanup')}
 			>
 				Run Device Cleanup
 			</button>
 			<button
 				class="bg-surface-raised border-border hover:border-accent rounded-lg border px-4 py-2 text-sm"
-				onclick={() => runMaintenance(adminCoverCycle, 'Cover Cycle')}
+				onclick={() => runMaintenance('cover_cycle', 'Cover Cycle')}
 			>
 				Cycle Cover Images
 			</button>
 		</div>
-		<p class="text-text-muted mt-4 text-sm">Job history is not yet available.</p>
+	</section>
+
+	<!-- ── Jobs ──────────────────────────────────────────────────── -->
+	<section class="bg-surface rounded-xl p-6">
+		<h2 class="text-text-primary mb-4 text-lg font-semibold">Jobs</h2>
+
+		{#if $jobsQuery.isPending}
+			<p class="text-text-muted text-sm">Loading…</p>
+		{:else if $jobsQuery.isError}
+			<p class="text-error text-sm">Failed to load jobs.</p>
+		{:else}
+			{@const jobs = [...($jobsQuery.data?.jobs ?? [])].reverse()}
+			{#if jobs.length === 0}
+				<p class="text-text-muted text-sm">No jobs.</p>
+			{:else}
+				<div class="space-y-2">
+					{#each jobs as job (job.id)}
+						<div class="bg-surface-raised border-border rounded-lg border px-4 py-3">
+							<div class="flex items-center justify-between gap-4">
+								<div class="min-w-0">
+									<span class="text-text-primary text-sm font-medium">{job.type}</span>
+									{#if job.related_name}
+										<span class="text-text-muted text-sm"> — {job.related_name}</span>
+									{/if}
+								</div>
+								<span class="text-xs font-medium shrink-0 rounded px-2 py-0.5
+									{job.status === 'running' ? 'bg-accent/20 text-accent' :
+									 job.status === 'done' ? 'bg-green-500/20 text-green-400' :
+									 job.status === 'failed' ? 'bg-red-500/20 text-red-400' :
+									 'bg-surface text-text-muted border border-border'}"
+								>
+									{job.status}
+								</span>
+							</div>
+							{#if job.status === 'running' && job.total_steps > 1}
+								<div class="mt-2">
+									<div class="bg-border h-1 w-full overflow-hidden rounded-full">
+										<div
+											class="bg-accent h-full rounded-full transition-all"
+											style="width: {Math.round(((job.step - 1) / job.total_steps) * 100)}%"
+										></div>
+									</div>
+								</div>
+							{/if}
+							{#if job.supports_sub_jobs && job.total_sub_jobs > 0}
+								<div class="mt-2">
+									<div class="bg-border h-1 w-full overflow-hidden rounded-full">
+										<div
+											class="bg-accent h-full rounded-full transition-all"
+											style="width: {Math.round((job.subjobs_completed / job.total_sub_jobs) * 100)}%"
+										></div>
+									</div>
+									<p class="text-text-muted mt-1 text-xs">{job.subjobs_completed} / {job.total_sub_jobs}</p>
+								</div>
+							{/if}
+						</div>
+					{/each}
+				</div>
+				{#if ($jobsQuery.data?.total ?? 0) > jobs.length}
+					<p class="text-text-muted mt-3 text-xs">{$jobsQuery.data?.total} total jobs — showing most recent {jobs.length}</p>
+				{/if}
+			{/if}
+		{/if}
 	</section>
 </main>
 

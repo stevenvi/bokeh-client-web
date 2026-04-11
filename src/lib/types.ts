@@ -99,13 +99,17 @@ export interface Job {
 	id: number;
 	type: string;
 	status: string;
+	step: number;
+	total_steps: number;
+	supports_sub_jobs: boolean;
+	subjobs_completed: number;
+	total_sub_jobs: number;
 	related_id: number | null;
 	related_type: string | null;
+	related_name: string | null;
 	log: string | null;
-	error_message: string | null;
-	queued_at: string;
-	started_at: string | null;
-	completed_at: string | null;
+	created_at: string;
+	updated_at: string;
 }
 
 export interface AdminUser {
