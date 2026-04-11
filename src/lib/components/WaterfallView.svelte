@@ -1,7 +1,9 @@
 <script lang="ts">
 	import { createInfiniteQuery, createQuery, useQueryClient } from '@tanstack/svelte-query';
 	import { goto } from '$app/navigation';
+	import { onDestroy } from 'svelte';
 	import { slideshowPage, slideshowMetadata } from '$lib/api/collections';
+	import { navigationStore } from '$lib/stores/navigation';
 	import MonthGroup from './MonthGroup.svelte';
 	import YearScrollbar from './YearScrollbar.svelte';
 	import type { SlideshowItem } from '$lib/types';
@@ -16,7 +18,12 @@
 	const queryClient = useQueryClient();
 
 	// Jump target: when set, the infinite query starts from this month instead of the beginning.
-	let jumpTarget = $state<string | null>(null);
+	// Restored from navigationStore so returning from slideshow uses the same query cache key.
+	let jumpTarget = $state<string | null>(navigationStore.getJumpTarget(collectionId));
+
+	onDestroy(() => {
+		navigationStore.saveJumpTarget(collectionId, jumpTarget);
+	});
 
 	const waterfallQuery = $derived(
 		createInfiniteQuery({

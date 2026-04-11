@@ -15,6 +15,9 @@ function createNavigationStore() {
 	/** View modes keyed by collection ID, preserved across view transitions. */
 	const viewModes = new Map<number, string>();
 
+	/** Waterfall jump targets keyed by collection ID, preserved across view transitions. */
+	const jumpTargets = new Map<number, string | null>();
+
 	return {
 		subscribe,
 
@@ -60,6 +63,14 @@ function createNavigationStore() {
 
 		clearViewMode(collectionId: number) {
 			viewModes.delete(collectionId);
+		},
+
+		saveJumpTarget(collectionId: number, target: string | null) {
+			jumpTargets.set(collectionId, target);
+		},
+
+		getJumpTarget(collectionId: number): string | null {
+			return jumpTargets.get(collectionId) ?? null;
 		}
 	};
 }
