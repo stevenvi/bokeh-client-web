@@ -44,7 +44,6 @@
 					<MediaTile
 						id={item.id}
 						title={item.title}
-						placeholder={item.placeholder}
 						hasVariants={true}
 						aspectRatio={item.width_px && item.height_px ? item.width_px / item.height_px : null}
 						onclick={() => onItemClick(item)}

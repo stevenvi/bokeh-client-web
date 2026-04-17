@@ -58,7 +58,6 @@
 			<MediaTile
 				id={item.id}
 				title={item.title}
-				placeholder={item.photo?.placeholder ?? null}
 				hasVariants={item.photo?.variants_generated_at != null}
 				onclick={() => onItemClick(item, i)}
 			/>

@@ -26,6 +26,16 @@
 		return checkImg.complete && checkImg.naturalWidth > 0;
 	});
 
+	// Show the thumb as a stand-in while the full image loads, but only if the
+	// browser already has it in memory (it should from the grid view). If it's
+	// not cached, we skip it rather than triggering an extra fetch.
+	const thumbCached = $derived.by(() => {
+		if (fullLoaded) return false;
+		const check = new Image();
+		check.src = imageVariantUrl(item.id, 'thumb');
+		return check.complete && check.naturalWidth > 0;
+	});
+
 	let showDzi = $state(false);
 	let hideBackdrop = $state(false);
 	let dziFadingOut = $state(false);
@@ -218,13 +228,12 @@
 	ontouchend={onTouchEnd}
 	role="presentation"
 >
-	<!-- Placeholder blur -->
-	{#if item.placeholder && !fullLoaded}
+	<!-- Thumb stand-in: shown while full image loads, only if already in browser cache -->
+	{#if thumbCached}
 		<img
-			src="data:image/webp;base64,{item.placeholder}"
+			src={imageVariantUrl(item.id, 'thumb')}
 			alt=""
-			class="absolute inset-0 h-full w-full object-contain blur-sm scale-105 transition-opacity duration-300"
-			class:opacity-0={fullLoaded}
+			class="absolute inset-0 h-full w-full object-contain"
 			aria-hidden="true"
 		/>
 	{/if}

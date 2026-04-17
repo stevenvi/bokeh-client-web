@@ -4,14 +4,13 @@
 	interface Props {
 		id: number;
 		title: string;
-		placeholder: string | null;
 		hasVariants: boolean;
 		/** When set, tile uses natural aspect ratio instead of square crop. */
 		aspectRatio?: number | null;
 		onclick?: () => void;
 	}
 
-	let { id, title, placeholder, hasVariants, aspectRatio = null, onclick }: Props = $props();
+	let { id, title, hasVariants, aspectRatio = null, onclick }: Props = $props();
 
 	let thumbLoaded = $state(false);
 </script>
@@ -31,15 +30,9 @@
 			</svg>
 		</div>
 	{:else}
-		<!-- Placeholder (low-res AVIF, shown immediately) -->
-		{#if placeholder}
-			<img
-				src="data:image/webp;base64,{placeholder}"
-				alt=""
-				class="absolute inset-0 h-full w-full object-cover blur-sm scale-105 transition-opacity duration-300"
-				class:opacity-0={thumbLoaded}
-				aria-hidden="true"
-			/>
+		<!-- Pulse while thumbnail loads -->
+		{#if !thumbLoaded}
+			<div class="absolute inset-0 animate-pulse bg-surface-raised"></div>
 		{/if}
 		<!-- Full thumbnail (lazy-loaded) -->
 		<img

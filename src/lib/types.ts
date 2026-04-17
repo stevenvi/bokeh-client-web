@@ -27,7 +27,6 @@ export interface PhotoMetadata {
 	focal_length_35mm_equiv: number | null;
 	color_space: string | null;
 	description: string | null;
-	placeholder: string | null; // base64-encoded 32x32 WebP
 	variants_generated_at: string | null;
 }
 
@@ -68,7 +67,6 @@ export interface SlideshowItem {
 	title: string;
 	mime_type: string;
 	created_at: string | null;
-	placeholder: string | null; // base64-encoded 32x32 WebP
 	width_px: number | null;
 	height_px: number | null;
 }
