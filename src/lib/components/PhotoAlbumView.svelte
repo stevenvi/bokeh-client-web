@@ -26,8 +26,7 @@
 	$effect(() => {
 		toolbarStore.set({
 			mode,
-			onModeChange: (m) => { mode = m; },
-			onSlideshow: startSlideshow
+			onModeChange: (m) => { mode = m; }
 		});
 		return () => { toolbarStore.set(null); };
 	});
@@ -44,10 +43,6 @@
 			requestAnimationFrame(() => window.scrollTo(0, saved));
 		}
 	});
-
-	function startSlideshow() {
-		goto(`/collection/${collectionId}/slideshow?autoplay=true&order=asc&name=${encodeURIComponent(collectionName)}`);
-	}
 
 	function onKeyDown(e: KeyboardEvent) {
 		if (e.key !== 'Escape') return;
