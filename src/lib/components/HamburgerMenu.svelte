@@ -226,7 +226,7 @@
 		<nav class="flex flex-1 flex-col gap-1 px-2">
 			{#if !isHome}
 				<button
-					class="text-text-primary hover:bg-surface-raised flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm"
+					class="text-text-primary hover:bg-surface-raised flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm md:hidden"
 					onclick={() => navigate('/')}
 				>
 					<svg class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
