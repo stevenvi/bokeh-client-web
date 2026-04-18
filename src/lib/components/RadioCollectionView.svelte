@@ -45,7 +45,7 @@
 
 <svelte:window onkeydown={onKeyDown} />
 
-<div class="min-h-dvh">
+<div class="">
 	<div class="px-4 py-4">
 		{#if $showsQuery.isPending}
 			<div class="flex h-48 items-center justify-center">

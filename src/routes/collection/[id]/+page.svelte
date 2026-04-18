@@ -62,7 +62,7 @@
 	<title>{$collectionQuery.data?.name ?? 'Collection'} — Bokeh</title>
 </svelte:head>
 
-<main class="min-h-dvh ">
+<main class="">
 	{#if $collectionQuery.isPending}
 		<div class="flex h-48 items-center justify-center">
 			<div class="border-accent h-8 w-8 animate-spin rounded-full border-2 border-t-transparent"></div>

@@ -89,7 +89,7 @@
 
 <svelte:window onkeydown={onKeyDown} />
 
-<div class="min-h-dvh">
+<div class="">
 	<!-- Search bar -->
 	<div class="px-4 pt-4">
 		<input

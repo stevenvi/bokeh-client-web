@@ -10,6 +10,6 @@
 	<title>Radio Shows — Bokeh</title>
 </svelte:head>
 
-<main class="min-h-dvh">
+<main class="">
 	<RadioShowView {showId} {collectionId} />
 </main>

@@ -237,7 +237,7 @@
 	<title>Admin Dashboard — Bokeh</title>
 </svelte:head>
 
-<main class="min-h-dvh px-4 py-6">
+<main class="px-4 py-6">
 
 	<!-- ── Collection Management ─────────────────────────────────── -->
 	<section class="bg-surface mb-8 rounded-xl p-6">

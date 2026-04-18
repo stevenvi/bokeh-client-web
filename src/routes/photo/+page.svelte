@@ -32,7 +32,7 @@
 	<title>Photos – Bokeh</title>
 </svelte:head>
 
-<main class="min-h-dvh px-4 py-6">
+<main class="px-4 py-6">
 	<h1 class="text-text-primary mb-6 text-2xl font-semibold">Photos</h1>
 
 	{#if $collectionsQuery.isPending}

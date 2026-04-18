@@ -78,7 +78,7 @@
 
 <svelte:window onkeydown={onKeyDown} />
 
-<div class="min-h-dvh">
+<div class="">
 	{#if $tracksQuery.isPending}
 		<div class="flex h-48 items-center justify-center">
 			<div class="border-accent h-8 w-8 animate-spin rounded-full border-2 border-t-transparent"></div>

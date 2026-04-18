@@ -11,6 +11,6 @@
 	<title>Artist — Bokeh</title>
 </svelte:head>
 
-<main class="min-h-dvh ">
+<main class="">
 	<ArtistView {artistId} {rootCollectionId} />
 </main>
