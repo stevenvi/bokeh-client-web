@@ -21,6 +21,22 @@ function createNavigationStore() {
 	return {
 		subscribe,
 
+		/** Returns the path one level up in the breadcrumb trail, or '/' if at the top. */
+		previousPath(): string {
+			let crumbs: BreadcrumbEntry[] = [];
+			const unsubscribe = subscribe((v) => { crumbs = v; });
+			unsubscribe();
+			return crumbs.length >= 2 ? crumbs[crumbs.length - 2].path : '/';
+		},
+
+		/** Returns a snapshot of the current breadcrumb entries. */
+		getCrumbs(): BreadcrumbEntry[] {
+			let crumbs: BreadcrumbEntry[] = [];
+			const unsubscribe = subscribe((v) => { crumbs = v; });
+			unsubscribe();
+			return crumbs;
+		},
+
 		push(entry: BreadcrumbEntry) {
 			update((crumbs) => {
 				// Avoid duplicates by path, since IDs can collide across entity types

@@ -53,7 +53,7 @@
 			if (parentCollectionId != null) {
 				goto(`/collection/${parentCollectionId}`);
 			} else {
-				goto('/');
+				goto(navigationStore.previousPath());
 			}
 		}
 	}

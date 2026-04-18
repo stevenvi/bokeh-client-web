@@ -20,13 +20,22 @@
 		})
 	);
 
+	const categoryPaths = ['/photo', '/audio', '/video'];
+
 	$effect(() => {
 		if ($collectionQuery.data) {
 			const collection = $collectionQuery.data;
-			// Root collections (no parent) start a fresh breadcrumb trail rather than
-			// appending to whatever was previously navigated.
+			// Root collections start a fresh breadcrumb trail, unless:
+			// (a) the trail already contains a category page (/photo, /audio, /video), or
+			// (b) this collection is already in the trail (back-navigation; push() will truncate).
 			if (collection.parent_collection_id == null) {
-				navigationStore.reset();
+				const crumbs = navigationStore.getCrumbs();
+				const collectionPath = `/collection/${collection.id}`;
+				const alreadyInTrail = crumbs.some((c) => c.path === collectionPath);
+				const hasCategoryPage = crumbs.some((c) => categoryPaths.includes(c.path));
+				if (!alreadyInTrail && !hasCategoryPage) {
+					navigationStore.reset();
+				}
 			}
 			navigationStore.push({ id: collection.id, name: collection.name, path: `/collection/${collection.id}` });
 		}
@@ -42,7 +51,7 @@
 		if (parentId != null) {
 			goto(`/collection/${parentId}`);
 		} else {
-			goto('/');
+			goto(navigationStore.previousPath());
 		}
 	}
 </script>
