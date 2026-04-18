@@ -37,6 +37,7 @@
 	let isExpanded = $derived(node?.expanded ?? false);
 	let isSelected = $derived(selectedPath === path);
 	let isError = $derived(node?.children === 'error');
+	let isLoading = $derived(node !== undefined && node.children === null);
 
 	// Rows inside a wrapper need 9px left padding regardless of depth; depth-0 rows use 4px.
 	// This keeps toggle buttons at their expected absolute positions after the wrapper margins.
@@ -63,6 +64,8 @@
 				class="text-warning flex h-[14px] w-[14px] flex-shrink-0 items-center justify-center text-[11px]"
 				title="Failed to read directory"
 			>⚠</span>
+		{:else if isLoading}
+			<span class="h-[14px] w-[14px] flex-shrink-0 animate-spin rounded-full border border-white/40 border-t-transparent"></span>
 		{:else if hasChildren}
 			<button
 				type="button"
