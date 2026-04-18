@@ -7,9 +7,10 @@
 	interface Props {
 		collectionId: number;
 		onItemClick: (item: MediaItemView, index: number) => void;
+		suppressEmpty?: boolean;
 	}
 
-	let { collectionId, onItemClick }: Props = $props();
+	let { collectionId, onItemClick, suppressEmpty = false }: Props = $props();
 
 	const itemsQuery = $derived(
 		createInfiniteQuery({
@@ -50,7 +51,7 @@
 	</div>
 {:else if $itemsQuery.isError}
 	<p class="text-error px-4 py-6">Failed to load items.</p>
-{:else if allItems.length === 0}
+{:else if allItems.length === 0 && !suppressEmpty}
 	<p class="text-text-muted px-4 py-6 text-sm">No items in this collection.</p>
 {:else}
 	<div class="grid grid-cols-3 gap-0.5 sm:grid-cols-4 md:grid-cols-5 lg:grid-cols-6 xl:grid-cols-8">

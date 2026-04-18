@@ -66,5 +66,5 @@
 		</div>
 	{/if}
 
-	<MediaGrid {collectionId} onItemClick={handleItemClick} />
+	<MediaGrid {collectionId} onItemClick={handleItemClick} suppressEmpty={!!($childQuery.data?.length)} />
 </div>
