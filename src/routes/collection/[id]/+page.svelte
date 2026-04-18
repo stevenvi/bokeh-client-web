@@ -8,6 +8,7 @@
 	import MusicCollectionView from '$lib/components/MusicCollectionView.svelte';
 	import MovieCollectionView from '$lib/components/MovieCollectionView.svelte';
 	import HomeMovieCollectionView from '$lib/components/HomeMovieCollectionView.svelte';
+	import RadioCollectionView from '$lib/components/RadioCollectionView.svelte';
 	import UnsupportedCollectionView from '$lib/components/UnsupportedCollectionView.svelte';
 
 	const collectionId = $derived(Number(page.params.id));
@@ -33,9 +34,10 @@
 
 	function onKeyDown(e: KeyboardEvent) {
 		if (e.key !== 'Escape') return;
-		// Photo and music collections handle escape in their own views
+		// Photo, music, and show collections handle escape in their own views
 		if ($collectionQuery.data?.type === 'image:photo') return;
 		if ($collectionQuery.data?.type === 'audio:music') return;
+		if ($collectionQuery.data?.type === 'audio:show') return;
 		const parentId = $collectionQuery.data?.parent_collection_id;
 		if (parentId != null) {
 			goto(`/collection/${parentId}`);
@@ -64,6 +66,8 @@
 			<PhotoAlbumView collectionId={collectionId} collectionName={collection.name} parentCollectionId={collection.parent_collection_id} />
 		{:else if collection.type === 'audio:music' && collection.parent_collection_id == null}
 			<MusicCollectionView collectionId={collectionId} collectionName={collection.name} parentCollectionId={collection.parent_collection_id} />
+		{:else if collection.type === 'audio:show' && collection.parent_collection_id == null}
+			<RadioCollectionView collectionId={collectionId} collectionName={collection.name} parentCollectionId={collection.parent_collection_id} />
 		{:else if collection.type === 'video:movie'}
 			<MovieCollectionView {collection} />
 		{:else if collection.type === 'video:home_movie'}

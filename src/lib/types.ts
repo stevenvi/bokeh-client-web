@@ -171,6 +171,38 @@ export interface TrackView {
 	mime_type: string;
 }
 
+// Radio show types
+// A "show" is an artist; albums within that artist are groupings (seasons, volumes, etc.)
+export interface ShowSummary {
+	show_id: number; // artist_id
+	name: string;
+	manual_thumbnail: boolean;
+}
+
+export interface ShowBookmark {
+	media_item_id: number;
+	position_seconds: number;
+	last_listened_at: string;
+}
+
+export interface ShowEpisodesResponse {
+	show: Artist;
+	episodes: EpisodeView[];
+	bookmark: ShowBookmark | null;
+}
+
+// EpisodeView extends TrackView with the album (grouping) name for multi-level display.
+export interface EpisodeView {
+	id: number;
+	title: string;
+	track_number: number | null;
+	disc_number: number | null;
+	duration_seconds: number | null;
+	artist_name: string | null;
+	mime_type: string;
+	album_name: string;
+}
+
 export interface ArtistsPage {
 	artists: ArtistSummary[];
 	total_count: number;

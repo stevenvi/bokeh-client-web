@@ -8,7 +8,7 @@
 	import AlbumTile from './AlbumTile.svelte';
 	import AdminTileMenu from './AdminTileMenu.svelte';
 	import { authStore } from '$lib/stores/auth';
-	import { adminUploadArtistImage, adminUploadAlbumCover, adminDeleteAlbumCover } from '$lib/api/admin';
+	import { adminUploadArtistImage, adminDeleteArtistImage, adminUploadAlbumCover, adminDeleteAlbumCover } from '$lib/api/admin';
 	import { artistImageBust, bumpArtistImageBust, albumCoverBust, bumpAlbumCoverBust } from '$lib/stores/coverBust';
 	import { toastStore } from '$lib/stores/toast';
 
@@ -93,7 +93,8 @@
 				{#if $authStore?.isAdmin}
 					<div class="absolute top-0 right-0 z-10">
 						<AdminTileMenu items={[
-							{ emoji: '🖼', label: 'Upload Image', fileAccept: 'image/*', onFile: async (f) => { await adminUploadArtistImage(artist.id, f); artistImageError = false; artistImageLoaded = false; bumpArtistImageBust(artist.id); toastStore.show('Artist image updated.'); } }
+							{ emoji: '🖼', label: 'Upload Image', fileAccept: 'image/*', onFile: async (f) => { await adminUploadArtistImage(artist.id, f); artistImageError = false; artistImageLoaded = false; bumpArtistImageBust(artist.id); toastStore.show('Artist image updated.'); } },
+							{ emoji: '🗑', label: 'Remove Image', action: async () => { await adminDeleteArtistImage(artist.id); artistImageError = true; artistImageLoaded = false; bumpArtistImageBust(artist.id); toastStore.show('Artist image removed.'); } }
 						]} />
 					</div>
 				{/if}

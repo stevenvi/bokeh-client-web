@@ -68,7 +68,7 @@
 		{ value: 'video:movie', label: 'Movie Library' },
 		{ value: 'video:home_movie', label: 'Home Movies' },
 		{ value: 'audio:music', label: 'Music Library' },
-		{ value: 'audio:radio', label: 'Radio Library' }
+		{ value: 'audio:show', label: 'Radio Shows' }
 	] as const;
 
 	function collTypeLabel(val: string) {
@@ -462,7 +462,7 @@
 			<circle cx="6" cy="18" r="3"/>
 			<circle cx="18" cy="16" r="3"/>
 		</svg>
-	{:else if type === 'audio:radio'}
+	{:else if type === 'audio:show'}
 		<!-- Radio tower with signal arcs -->
 		<svg class="h-4 w-4 flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round">
 			<line x1="12" y1="2" x2="12" y2="13"/>

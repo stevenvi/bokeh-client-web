@@ -4,19 +4,27 @@
 	interface Props {
 		id: number;
 		name: string;
+		bust?: number;
 		onclick?: () => void;
 	}
 
-	let { id, name, onclick }: Props = $props();
+	let { id, name, bust, onclick }: Props = $props();
 	let imageLoaded = $state(false);
 	let imageError = $state(false);
+
+	$effect(() => {
+		if (bust !== undefined) {
+			imageLoaded = false;
+			imageError = false;
+		}
+	});
 </script>
 
 <button class="group w-full text-left" {onclick}>
 	<div class="relative bg-surface-raised aspect-square w-full overflow-hidden rounded-lg transition-opacity group-hover:opacity-80">
 		{#if !imageError}
 			<img
-				src={artistImageUrl(id)}
+				src={artistImageUrl(id) + (bust ? `?v=${bust}` : '')}
 				alt=""
 				class="absolute inset-0 h-full w-full object-cover transition-opacity duration-300"
 				class:opacity-0={!imageLoaded}

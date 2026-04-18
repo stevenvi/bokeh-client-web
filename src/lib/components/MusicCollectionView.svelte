@@ -5,6 +5,11 @@
 	import { navigationStore } from '$lib/stores/navigation';
 	import { mediaPlayer } from '$lib/stores/mediaPlayer';
 	import ArtistTile from './ArtistTile.svelte';
+	import AdminTileMenu from './AdminTileMenu.svelte';
+	import { authStore } from '$lib/stores/auth';
+	import { adminUploadArtistImage, adminDeleteArtistImage } from '$lib/api/admin';
+	import { artistImageBust, bumpArtistImageBust } from '$lib/stores/coverBust';
+	import { toastStore } from '$lib/stores/toast';
 
 	interface Props {
 		collectionId: number;
@@ -110,11 +115,22 @@
 		{:else}
 			<div class="grid grid-cols-2 gap-4 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6">
 				{#each allArtists as artist (artist.id)}
-					<ArtistTile
-						id={artist.id}
-						name={artist.name}
-						onclick={() => openArtist(artist.id, artist.name)}
-					/>
+					<div class="relative">
+						<ArtistTile
+							id={artist.id}
+							name={artist.name}
+							bust={$artistImageBust[artist.id]}
+							onclick={() => openArtist(artist.id, artist.name)}
+						/>
+						{#if $authStore?.isAdmin}
+							<div class="absolute top-1 right-1 z-10" onclick={(e) => e.stopPropagation()}>
+								<AdminTileMenu items={[
+									{ emoji: '🖼', label: 'Upload Image', fileAccept: 'image/*', onFile: async (f) => { await adminUploadArtistImage(artist.id, f); bumpArtistImageBust(artist.id); toastStore.show('Artist image updated.'); } },
+									{ emoji: '🗑', label: 'Remove Image', action: async () => { await adminDeleteArtistImage(artist.id); bumpArtistImageBust(artist.id); toastStore.show('Artist image removed.'); } }
+								]} />
+							</div>
+						{/if}
+					</div>
 				{/each}
 			</div>
 			<div bind:this={sentinel} class="h-4"></div>

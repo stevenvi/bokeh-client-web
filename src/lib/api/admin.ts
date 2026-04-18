@@ -66,6 +66,10 @@ export function adminUploadAlbumCover(albumId: number, file: File): Promise<void
 	return apiFetchForm<void>(`/api/v1/admin/albums/${albumId}/cover`, form);
 }
 
+export function adminDeleteArtistImage(id: number): Promise<void> {
+	return apiFetch<void>(`/api/v1/admin/artists/${id}/image`, { method: 'DELETE' });
+}
+
 export function adminDeleteAlbumCover(albumId: number): Promise<void> {
 	return apiFetch<void>(`/api/v1/admin/albums/${albumId}/cover`, { method: 'DELETE' });
 }

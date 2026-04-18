@@ -1,6 +1,6 @@
 import { writable, get } from 'svelte/store';
-import { listAlbumTracks, audioStreamUrl, albumCoverUrl } from '$lib/api/music';
-import type { TrackView } from '$lib/types';
+import { listAlbumTracks, audioStreamUrl, albumCoverUrl, artistImageUrl } from '$lib/api/music';
+import type { TrackView, EpisodeView } from '$lib/types';
 
 export interface AudioQueueItem {
 	id: number;
@@ -35,6 +35,8 @@ export interface MediaPlayerState {
 	queueIndex: number;
 	shuffle: boolean;
 	repeat: 'none' | 'one' | 'all';
+	// When playing a radio show, showId is set to the album id; null for regular music.
+	showId: number | null;
 	// Video-only (also used for display in audio mode)
 	itemId: number | null;
 	title: string;
@@ -59,7 +61,8 @@ function loadSavedState(): Partial<MediaPlayerState> {
 				volume: parsed.volume ?? 1,
 				shuffle: parsed.shuffle ?? false,
 				repeat: parsed.repeat ?? 'none',
-				visible: parsed.visible ?? false
+				visible: parsed.visible ?? false,
+				showId: parsed.showId ?? null
 			};
 		}
 	} catch {
@@ -84,6 +87,7 @@ function createMediaPlayerStore() {
 		queueIndex: saved.queueIndex ?? 0,
 		shuffle: saved.shuffle ?? false,
 		repeat: saved.repeat ?? 'none',
+		showId: saved.showId ?? null,
 		itemId: null,
 		title: '',
 		subtitle: '',
@@ -103,6 +107,8 @@ function createMediaPlayerStore() {
 	let hlsInstance: any = null;
 	// Artwork cache — keyed by albumId to avoid re-fetching within an album
 	let artworkCache: { albumId: number; dataUrl: string } | null = null;
+	// Timestamp of last server-side show bookmark save (epoch ms)
+	let lastShowBookmarkSaved = 0;
 
 	function persist(state: MediaPlayerState) {
 		try {
@@ -115,7 +121,8 @@ function createMediaPlayerStore() {
 					volume: state.volume,
 					shuffle: state.shuffle,
 					repeat: state.repeat,
-					visible: state.visible
+					visible: state.visible,
+					showId: state.showId
 				})
 			);
 		} catch {
@@ -132,6 +139,19 @@ function createMediaPlayerStore() {
 			if (now - lastPersistTime >= 1000) {
 				lastPersistTime = now;
 				persist(get({ subscribe }));
+			}
+			// Send server-side bookmark for radio shows every 15 seconds
+			if (now - lastShowBookmarkSaved >= 15000) {
+				const state = get({ subscribe });
+				if (state.showId != null && state.isPlaying) {
+					const item = state.queue[state.queueIndex];
+					if (item) {
+						lastShowBookmarkSaved = now;
+						import('$lib/api/radio').then(({ upsertShowBookmark }) => {
+							upsertShowBookmark(state.showId!, item.id, Math.floor(audioEl!.currentTime)).catch(() => {});
+						});
+					}
+				}
 			}
 		};
 		audioEl.onloadedmetadata = () => {
@@ -276,6 +296,10 @@ function createMediaPlayerStore() {
 		audioEl.volume = state.volume;
 		audioEl.play().catch(() => {});
 
+		// For shows the showId is the artistId; use the artist image instead of album cover.
+		const thumbnail =
+			state.showId != null ? artistImageUrl(state.showId) : albumCoverUrl(track.albumId);
+
 		// Set isPlaying: true before setupMediaSession so that applyMetadata
 		// reads the correct state when it checks isPlaying for playbackState.
 		update((s) => ({
@@ -286,7 +310,7 @@ function createMediaPlayerStore() {
 			duration: 0,
 			title: track.title,
 			subtitle: track.artistName ?? track.albumName,
-			thumbnailUrl: albumCoverUrl(track.albumId),
+			thumbnailUrl: thumbnail,
 			visible: true
 		}));
 		setupMediaSession(track);
@@ -349,7 +373,7 @@ function createMediaPlayerStore() {
 			stopVideo();
 			const queue = tracksToQueue(albumId, data.album.name, data.tracks);
 			update((s) => {
-				const ns = { ...s, type: 'audio' as const, queue, queueIndex: 0, visible: true };
+				const ns = { ...s, type: 'audio' as const, queue, queueIndex: 0, showId: null, visible: true };
 				persist(ns);
 				return ns;
 			});
@@ -368,11 +392,39 @@ function createMediaPlayerStore() {
 		stopVideo();
 		const queue = tracksToQueue(albumId, albumName, tracks);
 		update((s) => {
-			const ns = { ...s, type: 'audio' as const, queue, queueIndex: startIndex, visible: true };
+			const ns = { ...s, type: 'audio' as const, queue, queueIndex: startIndex, showId: null, visible: true };
 			persist(ns);
 			return ns;
 		});
 		playCurrentAudioTrack();
+	}
+
+	function playShowFromEpisode(
+		showId: number,
+		showName: string,
+		episodes: (TrackView | EpisodeView)[],
+		startIndex: number,
+		startPositionSeconds: number
+	) {
+		stopVideo();
+		lastShowBookmarkSaved = 0;
+		// showId doubles as albumId for cover art lookups
+		const queue = tracksToQueue(showId, showName, episodes);
+		update((s) => {
+			const ns = { ...s, type: 'audio' as const, queue, queueIndex: startIndex, showId, visible: true };
+			persist(ns);
+			return ns;
+		});
+		playCurrentAudioTrack();
+		if (startPositionSeconds > 0 && audioEl) {
+			audioEl.addEventListener(
+				'loadedmetadata',
+				() => {
+					if (audioEl) audioEl.currentTime = startPositionSeconds;
+				},
+				{ once: true }
+			);
+		}
 	}
 
 	async function playVideo(params: VideoPlayParams) {
@@ -491,6 +543,8 @@ function createMediaPlayerStore() {
 	function next() {
 		const state = get({ subscribe });
 		if (state.type !== 'audio') return;
+		// Reset show bookmark timer so the new episode's position is sent within 15s
+		if (state.showId != null) lastShowBookmarkSaved = 0;
 
 		if (state.repeat === 'one') {
 			if (audioEl) {
@@ -621,6 +675,7 @@ function createMediaPlayerStore() {
 		setElements,
 		playAlbum,
 		playAlbumFromTrack,
+		playShowFromEpisode,
 		playVideo,
 		play,
 		pause,
