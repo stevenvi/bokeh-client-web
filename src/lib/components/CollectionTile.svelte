@@ -6,10 +6,11 @@
 		id: number;
 		name: string;
 		type: string;
+		date?: Date | null;
 		onclick?: () => void;
 	}
 
-	let { id, name, type, onclick }: Props = $props();
+	let { id, name, type, date, onclick }: Props = $props();
 	let coverLoaded = $state(false);
 	let coverError = $state(false);
 </script>
@@ -51,5 +52,12 @@
 			{/if}
 		</div>
 	</div>
-	<p class="text-text-primary mt-2 line-clamp-2 h-10 text-sm font-medium">{name}</p>
+	<div class="mt-2">
+		<p class="text-text-primary line-clamp-2 text-sm font-medium">{name}</p>
+		{#if date}
+			<p class="text-text-primary text-xs mt-1">
+				{new Date(date).toLocaleDateString('en-US', { year: 'numeric', month: 'short', day: 'numeric' })}
+			</p>
+		{/if}
+	</div>
 </button>

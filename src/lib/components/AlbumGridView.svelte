@@ -48,6 +48,7 @@
 							id={child.id}
 							name={child.name}
 							type={child.type}
+							date={child.date}
 							onclick={() => openChild(child.id, child.name)}
 						/>
 						{#if $authStore?.isAdmin}

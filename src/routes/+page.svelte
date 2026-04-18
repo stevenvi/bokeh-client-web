@@ -53,6 +53,7 @@
 						id={collection.id}
 						name={collection.name}
 						type={collection.type}
+						date={collection.date}
 						onclick={() => openCollection(collection.id, collection.name)}
 					/>
 					{#if $authStore?.isAdmin}

@@ -11,6 +11,7 @@ export interface CollectionView {
 	parent_collection_id: number | null;
 	name: string;
 	type: string;
+	date?: string | null;
 }
 
 export interface PhotoMetadata {
