@@ -105,7 +105,7 @@
 		{/if}
 	</div>
 
-	<!-- Bottom EXIF bar -->
+	<!-- Bottom EXIF bar (large screen) -->
 	<div class="pointer-events-auto bg-gradient-to-t from-black/70 to-transparent px-4 py-3 text-center text-xs text-white/80">
 		{fmtDate(meta?.created_at ?? item.created_at)} &nbsp;|&nbsp;
 		{fmtAperture(meta?.aperture ?? null)} &nbsp;|&nbsp;
@@ -113,8 +113,7 @@
 		ISO {fmt(meta?.iso ?? null)} &nbsp;|&nbsp;
 		{fmt(meta?.focal_length_35mm_equiv ?? meta?.focal_length_mm ?? null, 'mm')}
 		<br>
-		<!-- {meta?.camera_make} | -->
-		{meta?.camera_model} | {meta?.lens_model ?? null}
+		{fmt(meta?.camera_model ?? null)} &nbsp;|&nbsp; {fmt(meta?.lens_model ?? null)}
 	</div>
 </div>
 
@@ -165,11 +164,12 @@
 		{/if}
 	</div>
 
-	<!-- Bottom EXIF strip -->
+	<!-- Bottom EXIF strip (mobile) -->
 	<div class="pointer-events-auto bg-gradient-to-t from-black/70 to-transparent px-4 py-3 text-center text-xs text-white/70">
 		{fmtDate(meta?.created_at ?? item.created_at)} &nbsp;&bull;&nbsp;
 		{fmtAperture(meta?.aperture ?? null)} &nbsp;&bull;&nbsp;
 		{@html fmtShutter(meta?.shutter_speed ?? null)} &nbsp;&bull;&nbsp;
-		ISO {fmt(meta?.iso ?? null)}
+		ISO {fmt(meta?.iso ?? null)} &nbsp;&bull;&nbsp;
+		{fmt(meta?.focal_length_35mm_equiv ?? meta?.focal_length_mm ?? null, 'mm')}
 	</div>
 </div>
