@@ -78,8 +78,11 @@
 	// ── Audio cover ──
 	let coverLoaded = $state(false);
 	let coverError = $state(false);
+	let lastCoverUrl = $state<string | null>(null);
 	$effect(() => {
-		if (currentAudioTrack) {
+		const url = ps.thumbnailUrl;
+		if (url !== lastCoverUrl) {
+			lastCoverUrl = url;
 			coverLoaded = false;
 			coverError = false;
 		}
