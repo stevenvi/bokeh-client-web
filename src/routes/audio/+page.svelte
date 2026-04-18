@@ -20,7 +20,13 @@
 	onMount(() => {
 		navigationStore.push({ id: -2, name: 'Audio', path: '/audio' });
 	});
+
+	function onKeyDown(e: KeyboardEvent) {
+		if (e.key === 'Escape') goto(navigationStore.previousPath());
+	}
 </script>
+
+<svelte:window onkeydown={onKeyDown} />
 
 <svelte:head>
 	<title>Audio – Bokeh</title>

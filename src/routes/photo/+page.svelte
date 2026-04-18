@@ -20,7 +20,13 @@
 	onMount(() => {
 		navigationStore.push({ id: -1, name: 'Photos', path: '/photo' });
 	});
+
+	function onKeyDown(e: KeyboardEvent) {
+		if (e.key === 'Escape') goto(navigationStore.previousPath());
+	}
 </script>
+
+<svelte:window onkeydown={onKeyDown} />
 
 <svelte:head>
 	<title>Photos – Bokeh</title>
