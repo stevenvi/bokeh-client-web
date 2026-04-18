@@ -3,7 +3,6 @@
 	import { goto, afterNavigate } from '$app/navigation';
 	import { listArtists } from '$lib/api/music';
 	import { navigationStore } from '$lib/stores/navigation';
-	import { mediaPlayer } from '$lib/stores/mediaPlayer';
 	import ArtistTile from './ArtistTile.svelte';
 	import AdminTileMenu from './AdminTileMenu.svelte';
 	import { authStore } from '$lib/stores/auth';
@@ -90,7 +89,7 @@
 
 <svelte:window onkeydown={onKeyDown} />
 
-<div class="min-h-dvh" class:pb-24={$mediaPlayer.visible}>
+<div class="min-h-dvh">
 	<!-- Search bar -->
 	<div class="px-4 pt-4">
 		<input

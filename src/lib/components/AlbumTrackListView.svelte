@@ -78,7 +78,7 @@
 
 <svelte:window onkeydown={onKeyDown} />
 
-<div class="min-h-dvh" class:pb-24={$mediaPlayer.visible}>
+<div class="min-h-dvh">
 	{#if $tracksQuery.isPending}
 		<div class="flex h-48 items-center justify-center">
 			<div class="border-accent h-8 w-8 animate-spin rounded-full border-2 border-t-transparent"></div>

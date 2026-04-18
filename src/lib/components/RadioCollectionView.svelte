@@ -3,7 +3,6 @@
 	import { goto } from '$app/navigation';
 	import { listShows } from '$lib/api/radio';
 	import { navigationStore } from '$lib/stores/navigation';
-	import { mediaPlayer } from '$lib/stores/mediaPlayer';
 	import ShowTile from './ShowTile.svelte';
 	import AdminTileMenu from './AdminTileMenu.svelte';
 	import { authStore } from '$lib/stores/auth';
@@ -46,7 +45,7 @@
 
 <svelte:window onkeydown={onKeyDown} />
 
-<div class="min-h-dvh" class:pb-24={$mediaPlayer.visible}>
+<div class="min-h-dvh">
 	<div class="px-4 py-4">
 		{#if $showsQuery.isPending}
 			<div class="flex h-48 items-center justify-center">

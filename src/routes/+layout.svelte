@@ -79,17 +79,19 @@
 	{:else if $appStore.state === 'logging-in'}
 		<LoginScreen />
 	{:else}
-		<!-- Authenticated app shell -->
-		<HamburgerMenu />
-		{#key routeKey}
-			<div class="page-transition">
-				{@render children()}
+		<!-- Authenticated app shell: fixed viewport height, player below the scrollable content area -->
+		<div class="flex h-dvh flex-col overflow-hidden">
+			<HamburgerMenu />
+			<div class="flex-1 overflow-y-auto">
+				{#key routeKey}
+					<div class="page-transition">
+						{@render children()}
+					</div>
+				{/key}
 			</div>
-		{/key}
+			<MediaPlayer />
+		</div>
 	{/if}
-
-	<!-- Media player persists across all routes (audio + video) -->
-	<MediaPlayer />
 
 	<!-- Network error banner is always rendered so it can intercept failures at any time -->
 	<NetworkErrorBanner />

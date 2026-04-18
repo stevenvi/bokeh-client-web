@@ -414,7 +414,7 @@
 <!-- Mini player bar -->
 {#if showMiniPlayer}
 	<div
-		class="fixed inset-x-0 bottom-0 z-50 bg-surface-raised border-t border-border shadow-lg pb-safe"
+		class="bg-surface-raised border-t border-border shadow-lg pb-safe"
 		class:pl-[110px]={ps.type === 'video'}
 	>
 		<!-- Progress bar (thin line above controls) -->
