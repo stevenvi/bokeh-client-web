@@ -111,7 +111,10 @@
 		{fmtAperture(meta?.aperture ?? null)} &nbsp;|&nbsp;
 		{@html fmtShutter(meta?.shutter_speed ?? null)} &nbsp;|&nbsp;
 		ISO {fmt(meta?.iso ?? null)} &nbsp;|&nbsp;
-		{fmt(meta?.focal_length_35mm_equiv ?? null, 'mm')}
+		{fmt(meta?.focal_length_35mm_equiv ?? meta?.focal_length_mm ?? null, 'mm')}
+		<br>
+		<!-- {meta?.camera_make} | -->
+		{meta?.camera_model} | {meta?.lens_model ?? null}
 	</div>
 </div>
 
