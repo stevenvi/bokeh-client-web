@@ -35,12 +35,7 @@
 	);
 
 	const childCollections = $derived($childCollectionsQuery.data ?? []);
-	const items = $derived(
-		($itemsQuery.data?.items ?? []).slice().sort((a, b) => {
-			// Sort by title (relative_path proxy)
-			return a.title.localeCompare(b.title);
-		})
-	);
+	const items = $derived($itemsQuery.data?.items ?? []);
 
 	function formatDate(item: MediaItemView): string | null {
 		const date = item.video?.date;
