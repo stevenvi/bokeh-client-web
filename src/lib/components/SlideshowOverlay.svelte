@@ -64,14 +64,14 @@
 	<div class="pointer-events-auto flex items-center bg-gradient-to-b from-black/60 to-transparent px-4 py-3">
 		<button
 			class="text-white/80 hover:text-white mr-4 flex items-center gap-2 text-sm"
-			onclick={onBack}
+			onclick={(e) => { e.stopPropagation(); onBack(); }}
 		>
 			<svg class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
 				<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10.5 19.5L3 12m0 0l7.5-7.5M3 12h18" />
 			</svg>
 			Back
 		</button>
-		<span class="flex-1 text-center text-sm font-medium text-white/90">{collectionName}</span>
+		<span class="flex-1 select-none text-center text-sm font-medium text-white/90">{collectionName}</span>
 	</div>
 
 	<!-- Center nav arrows -->
@@ -79,7 +79,7 @@
 		{#if hasPrev}
 			<button
 				class="bg-black/30 hover:bg-black/50 rounded-full p-3 text-white"
-				onclick={onPrev}
+				onclick={(e) => { e.stopPropagation(); onPrev(); }}
 				aria-label="Previous"
 			>
 				<svg class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -93,7 +93,7 @@
 		{#if hasNext}
 			<button
 				class="bg-black/30 hover:bg-black/50 rounded-full p-3 text-white"
-				onclick={onNext}
+				onclick={(e) => { e.stopPropagation(); onNext(); }}
 				aria-label="Next"
 			>
 				<svg class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -106,7 +106,7 @@
 	</div>
 
 	<!-- Bottom EXIF bar (large screen) -->
-	<div class="pointer-events-auto bg-gradient-to-t from-black/70 to-transparent px-4 py-3 text-center text-xs text-white/80">
+	<div class="pointer-events-auto select-none bg-gradient-to-t from-black/70 to-transparent px-4 py-3 text-center text-xs text-white/80">
 		{fmtDate(meta?.created_at ?? item.created_at)} &nbsp;|&nbsp;
 		{fmtAperture(meta?.aperture ?? null)} &nbsp;|&nbsp;
 		{@html fmtShutter(meta?.shutter_speed ?? null)} &nbsp;|&nbsp;
@@ -123,14 +123,14 @@
 	<div class="pointer-events-auto flex items-center bg-gradient-to-b from-black/60 to-transparent px-4 py-3">
 		<button
 			class="text-white/80 hover:text-white mr-4 flex items-center gap-2 text-sm"
-			onclick={onBack}
+			onclick={(e) => { e.stopPropagation(); onBack(); }}
 			aria-label="Back"
 		>
 			<svg class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
 				<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10.5 19.5L3 12m0 0l7.5-7.5M3 12h18" />
 			</svg>
 		</button>
-		<span class="flex-1 truncate text-center text-sm font-medium text-white/90">{collectionName}</span>
+		<span class="flex-1 select-none truncate text-center text-sm font-medium text-white/90">{collectionName}</span>
 	</div>
 
 	<!-- Center nav arrows -->
@@ -138,7 +138,7 @@
 		{#if hasPrev}
 			<button
 				class="bg-black/30 rounded-full p-4 text-white active:bg-black/60"
-				onclick={onPrev}
+				onclick={(e) => { e.stopPropagation(); onPrev(); }}
 				aria-label="Previous"
 			>
 				<svg class="h-7 w-7" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -152,7 +152,7 @@
 		{#if hasNext}
 			<button
 				class="bg-black/30 rounded-full p-4 text-white active:bg-black/60"
-				onclick={onNext}
+				onclick={(e) => { e.stopPropagation(); onNext(); }}
 				aria-label="Next"
 			>
 				<svg class="h-7 w-7" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -165,7 +165,7 @@
 	</div>
 
 	<!-- Bottom EXIF strip (mobile) -->
-	<div class="pointer-events-auto bg-gradient-to-t from-black/70 to-transparent px-4 py-3 text-center text-xs text-white/70">
+	<div class="pointer-events-auto select-none bg-gradient-to-t from-black/70 to-transparent px-4 py-3 text-center text-xs text-white/70">
 		{fmtDate(meta?.created_at ?? item.created_at)} &nbsp;&bull;&nbsp;
 		{fmtAperture(meta?.aperture ?? null)} &nbsp;&bull;&nbsp;
 		{@html fmtShutter(meta?.shutter_speed ?? null)} &nbsp;&bull;&nbsp;
