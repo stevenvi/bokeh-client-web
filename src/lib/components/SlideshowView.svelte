@@ -42,17 +42,20 @@
 	let detailCache = $state(new Map<number, MediaItemDetail>());
 	let loadingPrev = $state(false);
 
-	// Strip transition state — the strip holds [prev, current, next] side by side.
-	// Normal position: translateX(-33.333%) so the center slot is visible.
-	let stripAnimated = $state(false);
-	let stripOffsetPx = $state(0); // extra pixel offset from center (for swipe + animation)
+	// Slide transition state — each slide is absolutely positioned and translated.
+	// slideOffsetPx shifts all slides in unison (for animation and swiping).
+	let slideOffsetPx = $state(0);
+	let slideAnimated = $state(false);
+	let slideEasing = $state<'ease-out' | 'linear'>('ease-out');
 	let transitioning = $state(false);
+	let pendingDir = $state<1 | -1 | null>(null);
+	let slidesContainer: HTMLDivElement | null = $state(null);
+	let safetyTimer: ReturnType<typeof setTimeout> | null = null;
+	let transitionHandled = false;
 
 	// Swipe state
 	let swipeStartX = 0;
-	let swipeCurrentX = $state(0);
 	let swiping = $state(false);
-
 
 	let zoomed = $state(false);
 	let justExitedZoom = $state(false);
@@ -65,12 +68,22 @@
 	let feedbackKey = $state(0);
 
 	const currentItem = $derived(items[currentIndex] ?? null);
-	const prevItem = $derived(currentIndex > 0 ? items[currentIndex - 1] : null);
-	const nextItem = $derived(currentIndex < items.length - 1 ? items[currentIndex + 1] : null);
 	const hasPrev = $derived(currentIndex > 0 || prevCursor !== null);
 	const hasNext = $derived(currentIndex < items.length - 1 || nextCursor !== null);
 
 	const variant = $derived(selectVariant(window.innerWidth, window.innerHeight));
+
+	// Visible slides: current item ± 1, keyed by item id so DOM elements persist
+	// across index changes — no img src swaps, no flicker.
+	const visibleSlides = $derived.by(() => {
+		const result: Array<{ index: number; item: SlideshowItem }> = [];
+		for (let i = currentIndex - 1; i <= currentIndex + 1; i++) {
+			if (i >= 0 && i < items.length) {
+				result.push({ index: i, item: items[i] });
+			}
+		}
+		return result;
+	});
 
 	// Preload ±2 images into the browser cache
 	$effect(() => {
@@ -99,6 +112,7 @@
 	onDestroy(() => {
 		if (playTimer) clearInterval(playTimer);
 		if (overlayHideTimer) clearTimeout(overlayHideTimer);
+		if (safetyTimer) clearTimeout(safetyTimer);
 	});
 
 	async function loadInitial() {
@@ -172,10 +186,21 @@
 		};
 	});
 
-	async function advance(dir: 1 | -1) {
+	function advance(dir: 1 | -1) {
 		const next = currentIndex + dir;
 		if (next < 0 || next >= items.length) return;
-		if (transitioning) return;
+
+		if (transitioning) {
+			// Buffer at most one pending advance (replaces any existing pending)
+			pendingDir = dir;
+			return;
+		}
+
+		beginSlide(dir, false);
+	}
+
+	function beginSlide(dir: 1 | -1, chained: boolean) {
+		transitionHandled = false;
 		transitioning = true;
 
 		// Reset autoplay timer so the full interval starts from this slide
@@ -184,20 +209,88 @@
 			playTimer = setInterval(() => advance(1), 5000);
 		}
 
-		// Animate the strip to reveal the adjacent slot
-		stripAnimated = true;
-		stripOffsetPx = dir === 1 ? -window.innerWidth : window.innerWidth;
+		slideEasing = chained ? 'linear' : 'ease-out';
+		slideAnimated = true;
+		slideOffsetPx = dir === 1 ? -window.innerWidth : window.innerWidth;
 
-		setTimeout(async () => {
-			// Update content while the center slot is still off-screen (strip at offset).
-			// This ensures the center has the correct new item before it becomes visible.
-			stripAnimated = false;
-			currentIndex = next;
-			await tick();
-			// Now snap back — center slot already has new content, no flicker.
-			stripOffsetPx = 0;
+		// Safety timeout in case transitionend doesn't fire
+		if (safetyTimer) clearTimeout(safetyTimer);
+		safetyTimer = setTimeout(() => {
+			safetyTimer = null;
+			if (transitioning && slideOffsetPx !== 0) {
+				transitionHandled = true;
+				finishSlide();
+			}
+		}, 350);
+	}
+
+	function onSlideTransitionEnd(e: TransitionEvent) {
+		if (e.propertyName !== 'transform' || !transitioning || transitionHandled) return;
+		transitionHandled = true;
+		if (safetyTimer) { clearTimeout(safetyTimer); safetyTimer = null; }
+
+		if (slideOffsetPx === 0) {
+			// Snap-back from swipe that didn't meet threshold
+			slideAnimated = false;
 			transitioning = false;
-		}, 250);
+			return;
+		}
+
+		finishSlide();
+	}
+
+	async function finishSlide() {
+		const dir = slideOffsetPx < 0 ? 1 : -1;
+		const next = currentIndex + dir;
+
+		const pending = pendingDir;
+		pendingDir = null;
+
+		// Batch all updates in one synchronous block.
+		// Because slides are keyed by item id, persisting slides keep
+		// their DOM elements — no src change, no flicker.
+		// The transform recalculation yields the same visual positions.
+		slideAnimated = false;
+		currentIndex = next;
+		slideOffsetPx = 0;
+
+		if (pending !== null) {
+			const pendingNext = next + pending;
+			if (pendingNext >= 0 && pendingNext < items.length) {
+				// Flush DOM so the new slide element exists at its rest position
+				await tick();
+
+				// Use rAF to guarantee the browser has processed a layout pass
+				// with the new element at its initial position. A reflow inside
+				// the rAF commits that position, then setting the target in the
+				// same callback triggers a proper CSS transition.
+				const pendingCopy = pending;
+				requestAnimationFrame(() => {
+					if (slidesContainer) void slidesContainer.offsetHeight;
+
+					transitionHandled = false;
+					slideEasing = 'linear';
+					slideAnimated = true;
+					slideOffsetPx = pendingCopy === 1 ? -window.innerWidth : window.innerWidth;
+
+					if (playing && playTimer) {
+						clearInterval(playTimer);
+						playTimer = setInterval(() => advance(1), 5000);
+					}
+					if (safetyTimer) clearTimeout(safetyTimer);
+					safetyTimer = setTimeout(() => {
+						safetyTimer = null;
+						if (transitioning && slideOffsetPx !== 0) {
+							transitionHandled = true;
+							finishSlide();
+						}
+					}, 350);
+				});
+				return;
+			}
+		}
+
+		transitioning = false;
 	}
 
 	function handlePrev() { advance(-1); }
@@ -241,54 +334,66 @@
 	function onTouchStart(e: TouchEvent) {
 		if (e.touches.length !== 1 || transitioning || zoomed) return;
 		swipeStartX = e.touches[0].clientX;
-		swipeCurrentX = 0;
+		slideOffsetPx = 0;
 		swiping = true;
 	}
 
 	function onTouchMove(e: TouchEvent) {
 		if (!swiping || e.touches.length !== 1) return;
-		const dx = e.touches[0].clientX - swipeStartX;
-		if (dx > 0 && !hasPrev) { swipeCurrentX = dx * 0.2; return; }
-		if (dx < 0 && !hasNext) { swipeCurrentX = dx * 0.2; return; }
-		swipeCurrentX = dx;
+		let dx = e.touches[0].clientX - swipeStartX;
+		if (dx > 0 && !hasPrev) { dx *= 0.2; }
+		if (dx < 0 && !hasNext) { dx *= 0.2; }
+		slideOffsetPx = dx;
 	}
 
 	async function onTouchEnd() {
 		if (!swiping) return;
 		swiping = false;
-		const threshold = window.innerWidth * 0.2;
-		const dx = swipeCurrentX;
-		swipeCurrentX = 0;
+		const dx = slideOffsetPx;
 
+		// Negligible movement — treat as tap, not swipe
+		if (Math.abs(dx) < 2) {
+			slideOffsetPx = 0;
+			return;
+		}
+
+		const threshold = window.innerWidth * 0.2;
 		if (Math.abs(dx) > threshold) {
 			const dir = dx < 0 ? 1 : -1;
 			const next = currentIndex + dir;
 			if (next >= 0 && next < items.length) {
 				transitioning = true;
-				// Start from the swipe position and animate to the target
-				stripOffsetPx = dx;
-				stripAnimated = false;
+				transitionHandled = false;
+				// Commit current swipe position without transition, then animate to target
+				slideAnimated = false;
 				await tick();
-				stripAnimated = true;
-				stripOffsetPx = dir === 1 ? -window.innerWidth : window.innerWidth;
-				setTimeout(async () => {
-					stripAnimated = false;
-					currentIndex = next;
-					await tick();
-					stripOffsetPx = 0;
-					transitioning = false;
-				}, 250);
+				if (slidesContainer) void slidesContainer.offsetHeight;
+				slideEasing = 'ease-out';
+				slideAnimated = true;
+				slideOffsetPx = dir === 1 ? -window.innerWidth : window.innerWidth;
+
+				if (safetyTimer) clearTimeout(safetyTimer);
+				safetyTimer = setTimeout(() => {
+					safetyTimer = null;
+					if (transitioning && slideOffsetPx !== 0) {
+						transitionHandled = true;
+						finishSlide();
+					}
+				}, 350);
 				return;
 			}
 		}
 
 		// Snap back to center
-		stripOffsetPx = dx;
-		stripAnimated = false;
+		transitioning = true;
+		transitionHandled = false;
+		slideAnimated = false;
 		await tick();
-		stripAnimated = true;
-		stripOffsetPx = 0;
-		setTimeout(() => { stripAnimated = false; }, 250);
+		if (slidesContainer) void slidesContainer.offsetHeight;
+		slideEasing = 'ease-out';
+		slideAnimated = true;
+		slideOffsetPx = 0;
+		// transitionend handles cleanup (slideOffsetPx === 0 path)
 	}
 
 	// Keyboard navigation
@@ -304,13 +409,6 @@
 			}
 		}
 	}
-
-	// Strip transform: base at -33.333% (center slot visible), offset by swipe/animation px
-	const stripTransform = $derived(() => {
-		const swipeOffset = swiping ? swipeCurrentX : stripOffsetPx;
-		if (swipeOffset === 0) return 'translateX(-33.333%)';
-		return `translateX(calc(-33.333% + ${swipeOffset}px))`;
-	});
 </script>
 
 <svelte:window onkeydown={onKeyDown} />
@@ -330,44 +428,39 @@
 			<div class="border-accent h-10 w-10 animate-spin rounded-full border-2 border-t-transparent"></div>
 		</div>
 	{:else}
-		<!-- 3-slot strip: [prev] [current] [next] -->
-		<div
-			class="flex h-full"
-			class:strip-transition={stripAnimated && !swiping}
-			style="width: 300%; transform: {stripTransform()}"
-		>
-			<!-- Previous image -->
-			<div class="h-full" style="width: calc(100% / 3)">
-				{#if prevItem}
+		<!-- Slides: each absolutely positioned, keyed by item id.
+		     When currentIndex changes, persisting slides keep their DOM elements
+		     (no img src change) — only their translateX recalculates to the same
+		     visual position. Off-screen items are added/removed invisibly. -->
+		<div bind:this={slidesContainer} class="relative h-full w-full">
+			{#each visibleSlides as vi (vi.item.id)}
+				<div
+					class="absolute inset-0"
+					class:slide-animated={slideAnimated && !swiping}
+					style="transform: translateX(calc({(vi.index - currentIndex) * 100}% + {slideOffsetPx}px)); --easing: {slideEasing}"
+					ontransitionend={onSlideTransitionEnd}
+				>
 					<img
-						src={imageVariantUrl(prevItem.id, variant)}
-						alt={prevItem.title}
-						class="strip-img"
+						src={imageVariantUrl(vi.item.id, variant)}
+						alt={vi.item.title}
+						class="slide-img"
 					/>
-				{/if}
-			</div>
+				</div>
+			{/each}
 
-			<!-- Current image (full SlideshowImage with DZI support) -->
-			<div class="h-full" style="width: calc(100% / 3)">
-				<SlideshowImage
-					item={currentItem}
-					active={true}
-					{zoomed}
-					onZoom={() => zoomed = true}
-					onZoomExit={handleZoomExit}
-				/>
-			</div>
-
-			<!-- Next image -->
-			<div class="h-full" style="width: calc(100% / 3)">
-				{#if nextItem}
-					<img
-						src={imageVariantUrl(nextItem.id, variant)}
-						alt={nextItem.title}
-						class="strip-img"
+			<!-- SlideshowImage overlay: provides DZI deep-zoom, only mounted when at rest.
+			     The plain img underneath is identical, so mount/unmount is seamless. -->
+			{#if !transitioning && !swiping}
+				<div class="absolute inset-0 z-10">
+					<SlideshowImage
+						item={currentItem}
+						active={true}
+						{zoomed}
+						onZoom={() => zoomed = true}
+						onZoomExit={handleZoomExit}
 					/>
-				{/if}
-			</div>
+				</div>
+			{/if}
 		</div>
 
 		<!-- Play/pause feedback flash — re-keyed on every toggle to replay the animation -->
@@ -405,11 +498,11 @@
 </div>
 
 <style>
-	.strip-transition {
-		transition: transform 250ms ease-out;
+	.slide-animated {
+		transition: transform 250ms var(--easing, ease-out);
 	}
 
-	.strip-img {
+	.slide-img {
 		width: 100%;
 		height: 100%;
 		max-width: none;
