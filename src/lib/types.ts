@@ -14,11 +14,15 @@ export interface CollectionView {
 	date?: string | null;
 }
 
-export interface PhotoMetadata {
+export interface PhotoItem {
+	id: number;
+	title: string;
+	mime_type: string;
+	ordinal: number;
+	created_at: string | null;
+	variants_generated_at: string | null; // null = still processing
 	width_px: number | null;
 	height_px: number | null;
-	created_at: string | null;
-	camera_make: string | null;
 	camera_model: string | null;
 	lens_model: string | null;
 	shutter_speed: string | null;
@@ -26,12 +30,12 @@ export interface PhotoMetadata {
 	iso: number | null;
 	focal_length_mm: number | null;
 	focal_length_35mm_equiv: number | null;
-	color_space: string | null;
-	description: string | null;
-	variants_generated_at: string | null;
 }
 
-export interface VideoMetadata {
+export interface VideoItemView {
+	id: number;
+	title: string;
+	mime_type: string;
 	duration_seconds?: number;
 	width?: number;
 	height?: number;
@@ -42,34 +46,19 @@ export interface VideoMetadata {
 	date?: string;
 	end_date?: string;
 	author?: string;
-	manual_cover: boolean;
+	manual_thumbnail: boolean;
 	bookmark_seconds?: number;
 }
 
-export interface MediaItemView {
-	id: number;
-	title: string;
-	mime_type: string;
-	ordinal: number | null;
-	photo: PhotoMetadata | null;
-	video: VideoMetadata | null;
+export interface PhotoStats {
+	total: number;
+	months: SlideshowMonthCount[];
 }
 
-export interface MediaItemDetail extends MediaItemView {
-	collection_id: number;
-	file_size_bytes: number;
-	missing_since: string | null;
-	indexed_at: string;
-	created_at: string;
-}
-
-export interface SlideshowItem {
-	id: number;
-	title: string;
-	mime_type: string;
-	created_at: string | null;
-	width_px: number | null;
-	height_px: number | null;
+export interface SlideshowMonthCount {
+	year: number;
+	month: number;
+	count: number;
 }
 
 export interface DeviceView {

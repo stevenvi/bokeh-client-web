@@ -1,10 +1,11 @@
 <script lang="ts">
 	import { onMount, onDestroy, tick } from 'svelte';
-	import { getMediaItem } from '$lib/api/media';
+	import { get } from 'svelte/store';
 	import { imageVariantUrl } from '$lib/api/media';
-	import { slideshowPage } from '$lib/api/collections';
+	import { listPhotos } from '$lib/api/collections';
+	import { slideshowStore } from '$lib/stores/slideshow';
 	import { selectVariant } from '$lib/utils/variant';
-	import type { SlideshowItem, MediaItemDetail } from '$lib/types';
+	import type { PhotoItem } from '$lib/types';
 	import SlideshowImage from './SlideshowImage.svelte';
 	import SlideshowOverlay from './SlideshowOverlay.svelte';
 
@@ -14,8 +15,6 @@
 		order: 'asc' | 'desc';
 		recursive: boolean;
 		startItem?: number | null;
-		startIndex: number;
-		initialItems?: SlideshowItem[];
 		collectionName?: string;
 	}
 
@@ -25,25 +24,29 @@
 		order,
 		recursive,
 		startItem = null,
-		startIndex,
-		initialItems = [],
 		collectionName = ''
 	}: Props = $props();
 
-	// svelte-ignore state_referenced_locally -- intentional initial-value fork; these props don't change after mount
-	let items = $state<SlideshowItem[]>([...initialItems]);
+	// Read from store on mount
+	const store = get(slideshowStore);
+	// svelte-ignore state_referenced_locally -- intentional initial-value fork; these don't change after mount
+	let items = $state<PhotoItem[]>(store?.items ?? []);
 	// svelte-ignore state_referenced_locally
-	let currentIndex = $state(startIndex);
-	let nextCursor = $state<string | null>(null);
-	let prevCursor = $state<string | null>(null);
+	let total = $state(store?.total ?? 0);
+	// svelte-ignore state_referenced_locally -- intentional: order/recursive are props used only as initial defaults
+	const storeParams = store?.params ?? { sortOrder: order === 'desc' ? 'desc' : 'asc', recursive };
+
+	// Find start item index
+	// svelte-ignore state_referenced_locally -- intentional: items used only to find initial start position
+	const startIndex = items.findIndex((i) => i.id === startItem);
+	// svelte-ignore state_referenced_locally
+	let currentIndex = $state(startIndex >= 0 ? startIndex : 0);
+
 	// svelte-ignore state_referenced_locally
 	let playing = $state(autoplay);
 	let showOverlay = $state(false);
-	let detailCache = $state(new Map<number, MediaItemDetail>());
-	let loadingPrev = $state(false);
 
-	// Slide transition state — each slide is absolutely positioned and translated.
-	// slideOffsetPx shifts all slides in unison (for animation and swiping).
+	// Slide transition state
 	let slideOffsetPx = $state(0);
 	let slideAnimated = $state(false);
 	let slideEasing = $state<'ease-out' | 'linear'>('ease-out');
@@ -68,15 +71,18 @@
 	let feedbackKey = $state(0);
 
 	const currentItem = $derived(items[currentIndex] ?? null);
-	const hasPrev = $derived(currentIndex > 0 || prevCursor !== null);
-	const hasNext = $derived(currentIndex < items.length - 1 || nextCursor !== null);
+	const currentOrdinal = $derived(items[currentIndex]?.ordinal ?? 0);
+	const hasPrev = $derived(currentOrdinal > 0 || currentIndex > 0);
+	const hasNext = $derived(
+		total > 0 ? currentOrdinal < total - 1 : currentIndex < items.length - 1
+	);
 
 	const variant = $derived(selectVariant(window.innerWidth, window.innerHeight));
 
 	// Visible slides: current item ± 1, keyed by item id so DOM elements persist
 	// across index changes — no img src swaps, no flicker.
 	const visibleSlides = $derived.by(() => {
-		const result: Array<{ index: number; item: SlideshowItem }> = [];
+		const result: Array<{ index: number; item: PhotoItem }> = [];
 		for (let i = currentIndex - 1; i <= currentIndex + 1; i++) {
 			if (i >= 0 && i < items.length) {
 				result.push({ index: i, item: items[i] });
@@ -116,61 +122,67 @@
 	});
 
 	async function loadInitial() {
-		const page = await slideshowPage(collectionId, {
-			order,
-			recursive,
-			start: startItem
+		const page = await listPhotos(collectionId, {
+			sortOrder: storeParams.sortOrder,
+			recursive: storeParams.recursive,
+			offset: 0,
+			limit: 200
 		});
-		items = [...items, ...page.items];
-		nextCursor = page.next_cursor;
-		prevCursor = page.prev_cursor;
+		items = page.items;
+		// Find start item if provided
+		if (startItem != null) {
+			const idx = items.findIndex((i) => i.id === startItem);
+			if (idx >= 0) currentIndex = idx;
+		}
+		// Update store total from first page if unknown
+		if (total === 0 && page.items.length > 0) {
+			total = page.items.length; // minimum known
+		}
 	}
 
-	async function loadNext() {
-		if (!nextCursor) return;
-		const page = await slideshowPage(collectionId, {
-			order,
-			recursive,
-			cursor: nextCursor
-		});
-		items = [...items, ...page.items];
-		nextCursor = page.next_cursor;
-	}
-
-	async function loadPrev() {
-		if (!prevCursor || loadingPrev) return;
-		loadingPrev = true;
-		const page = await slideshowPage(collectionId, {
-			order,
-			recursive,
-			cursor: prevCursor
-		});
-		const newItems = page.items;
-		items = [...newItems, ...items];
-		currentIndex += newItems.length;
-		prevCursor = page.prev_cursor;
-		loadingPrev = false;
+	async function loadMore(direction: 'forward' | 'backward') {
+		if (direction === 'forward') {
+			const lastOrdinal = items.at(-1)?.ordinal ?? 0;
+			if (total > 0 && lastOrdinal >= total - 1) return;
+			const page = await listPhotos(collectionId, {
+				...storeParams,
+				offset: lastOrdinal + 1,
+				limit: 200
+			});
+			const newItems = page.items.filter((i) => !items.some((x) => x.ordinal === i.ordinal));
+			if (newItems.length > 0) {
+				items = [...items, ...newItems];
+				slideshowStore.appendItems(newItems);
+			}
+		} else {
+			const firstOrdinal = items[0]?.ordinal ?? 0;
+			if (firstOrdinal === 0) return;
+			const newOffset = Math.max(0, firstOrdinal - 200);
+			const page = await listPhotos(collectionId, {
+				...storeParams,
+				offset: newOffset,
+				limit: 200
+			});
+			const newItems = page.items.filter((i) => !items.some((x) => x.ordinal === i.ordinal));
+			if (newItems.length > 0) {
+				items = [...newItems, ...items];
+				currentIndex += newItems.length;
+				slideshowStore.appendItems(newItems);
+			}
+		}
 	}
 
 	// Prefetch next page when nearing the end
 	$effect(() => {
-		if (currentItem && currentIndex >= items.length - 3 && nextCursor !== null) {
-			loadNext();
+		if (currentItem && currentIndex >= items.length - 5) {
+			loadMore('forward');
 		}
 	});
 
 	// Prefetch previous page when nearing the start
 	$effect(() => {
-		if (currentIndex <= 2 && prevCursor !== null && !loadingPrev) {
-			loadPrev();
-		}
-	});
-
-	$effect(() => {
-		if (showOverlay && currentItem && !detailCache.has(currentItem.id)) {
-			getMediaItem(currentItem.id).then((detail) => {
-				detailCache = new Map(detailCache).set(currentItem.id, detail);
-			});
+		if (currentIndex <= 4 && items[0]?.ordinal > 0) {
+			loadMore('backward');
 		}
 	});
 
@@ -227,7 +239,10 @@
 	function onSlideTransitionEnd(e: TransitionEvent) {
 		if (e.propertyName !== 'transform' || !transitioning || transitionHandled) return;
 		transitionHandled = true;
-		if (safetyTimer) { clearTimeout(safetyTimer); safetyTimer = null; }
+		if (safetyTimer) {
+			clearTimeout(safetyTimer);
+			safetyTimer = null;
+		}
 
 		if (slideOffsetPx === 0) {
 			// Snap-back from swipe that didn't meet threshold
@@ -293,18 +308,26 @@
 		transitioning = false;
 	}
 
-	function handlePrev() { advance(-1); }
-	function handleNext() { advance(1); }
+	function handlePrev() {
+		advance(-1);
+	}
+	function handleNext() {
+		advance(1);
+	}
 	function handleTogglePlay() {
 		playing = !playing;
 		feedbackPlaying = playing;
 		feedbackKey += 1;
 	}
-	function handleBack() { history.back(); }
+	function handleBack() {
+		history.back();
+	}
 
 	function scheduleOverlayHide() {
 		if (overlayHideTimer) clearTimeout(overlayHideTimer);
-		overlayHideTimer = setTimeout(() => { showOverlay = false; }, 3000);
+		overlayHideTimer = setTimeout(() => {
+			showOverlay = false;
+		}, 3000);
 	}
 
 	function handleInteraction() {
@@ -327,7 +350,9 @@
 		// Suppress the tap-to-play action for a short window after zoom exit so
 		// the touch that triggered the exit doesn't immediately toggle play.
 		justExitedZoom = true;
-		setTimeout(() => { justExitedZoom = false; }, 350);
+		setTimeout(() => {
+			justExitedZoom = false;
+		}, 350);
 	}
 
 	// Swipe handling
@@ -341,8 +366,12 @@
 	function onTouchMove(e: TouchEvent) {
 		if (!swiping || e.touches.length !== 1) return;
 		let dx = e.touches[0].clientX - swipeStartX;
-		if (dx > 0 && !hasPrev) { dx *= 0.2; }
-		if (dx < 0 && !hasNext) { dx *= 0.2; }
+		if (dx > 0 && !hasPrev) {
+			dx *= 0.2;
+		}
+		if (dx < 0 && !hasNext) {
+			dx *= 0.2;
+		}
 		slideOffsetPx = dx;
 	}
 
@@ -398,10 +427,17 @@
 
 	// Keyboard navigation
 	function onKeyDown(e: KeyboardEvent) {
-		if (e.key === 'ArrowLeft') { handleInteraction(); advance(-1); }
-		else if (e.key === 'ArrowRight') { handleInteraction(); advance(1); }
-		else if (e.key === ' ') { e.preventDefault(); handleInteraction(); handleTogglePlay(); }
-		else if (e.key === 'Escape') {
+		if (e.key === 'ArrowLeft') {
+			handleInteraction();
+			advance(-1);
+		} else if (e.key === 'ArrowRight') {
+			handleInteraction();
+			advance(1);
+		} else if (e.key === ' ') {
+			e.preventDefault();
+			handleInteraction();
+			handleTogglePlay();
+		} else if (e.key === 'Escape') {
 			if (zoomed) {
 				zoomed = false;
 			} else {
@@ -456,7 +492,7 @@
 						item={currentItem}
 						active={true}
 						{zoomed}
-						onZoom={() => zoomed = true}
+						onZoom={() => (zoomed = true)}
 						onZoomExit={handleZoomExit}
 					/>
 				</div>
@@ -485,8 +521,8 @@
 		{#if showOverlay && !zoomed}
 			<SlideshowOverlay
 				item={currentItem}
-				detail={detailCache.get(currentItem.id) ?? null}
 				{collectionName}
+				{total}
 				{hasPrev}
 				{hasNext}
 				onPrev={handlePrev}
@@ -519,15 +555,29 @@
 	}
 
 	@keyframes play-feedback-fade {
-		0%   { opacity: 0; }
-		15%  { opacity: 1; }
-		65%  { opacity: 1; }
-		100% { opacity: 0; }
+		0% {
+			opacity: 0;
+		}
+		15% {
+			opacity: 1;
+		}
+		65% {
+			opacity: 1;
+		}
+		100% {
+			opacity: 0;
+		}
 	}
 
 	@keyframes play-feedback-scale {
-		0%   { transform: scale(0.7); }
-		15%  { transform: scale(1); }
-		100% { transform: scale(1.15); }
+		0% {
+			transform: scale(0.7);
+		}
+		15% {
+			transform: scale(1);
+		}
+		100% {
+			transform: scale(1.15);
+		}
 	}
 </style>

@@ -1,30 +1,46 @@
 <script lang="ts">
-	import { createInfiniteQuery } from '@tanstack/svelte-query';
-	import { listItems } from '$lib/api/collections';
+	import { createInfiniteQuery, createQuery } from '@tanstack/svelte-query';
+	import { listPhotos, photoStats } from '$lib/api/collections';
 	import MediaTile from './MediaTile.svelte';
-	import type { MediaItemView } from '$lib/types';
+	import type { PhotoItem } from '$lib/types';
 
 	interface Props {
 		collectionId: number;
-		onItemClick: (item: MediaItemView, index: number) => void;
+		onItemClick: (item: PhotoItem, index: number) => void;
 		suppressEmpty?: boolean;
 	}
 
 	let { collectionId, onItemClick, suppressEmpty = false }: Props = $props();
 
-	const itemsQuery = $derived(
-		createInfiniteQuery({
-			queryKey: ['items', collectionId],
-			queryFn: ({ pageParam }) => listItems(collectionId, pageParam as number),
-			initialPageParam: 1,
-			getNextPageParam: (lastPage) =>
-				lastPage.next_page != null ? lastPage.next_page : undefined
+	const statsQuery = $derived(
+		createQuery({
+			queryKey: ['photoStats', collectionId],
+			queryFn: () => photoStats(collectionId, false)
 		})
 	);
 
-	const allItems = $derived(
-		($itemsQuery.data?.pages ?? []).flatMap((page) => page.items)
+	const itemsQuery = $derived(
+		createInfiniteQuery({
+			queryKey: ['photos', collectionId],
+			queryFn: ({ pageParam }) =>
+				listPhotos(collectionId, {
+					recursive: false,
+					sortOrder: 'asc',
+					offset: pageParam as number,
+					limit: 50
+				}),
+			initialPageParam: 0,
+			getNextPageParam: (lastPage, allPages) => {
+				const total = $statsQuery.data?.total;
+				if (total != null && allPages.flatMap((p) => p.items).length >= total) return undefined;
+				return lastPage.items.length < lastPage.limit
+					? undefined
+					: lastPage.offset + lastPage.limit;
+			}
+		})
 	);
+
+	const allItems = $derived(($itemsQuery.data?.pages ?? []).flatMap((page) => page.items));
 
 	let sentinel: HTMLDivElement | null = $state(null);
 
@@ -32,7 +48,11 @@
 		if (!sentinel) return;
 		const observer = new IntersectionObserver(
 			([entry]) => {
-				if (entry.isIntersecting && $itemsQuery.hasNextPage && !$itemsQuery.isFetchingNextPage) {
+				if (
+					entry.isIntersecting &&
+					$itemsQuery.hasNextPage &&
+					!$itemsQuery.isFetchingNextPage
+				) {
 					$itemsQuery.fetchNextPage();
 				}
 			},
@@ -59,7 +79,7 @@
 			<MediaTile
 				id={item.id}
 				title={item.title}
-				hasVariants={item.photo?.variants_generated_at != null}
+				hasVariants={item.variants_generated_at != null}
 				onclick={() => onItemClick(item, i)}
 			/>
 		{/each}

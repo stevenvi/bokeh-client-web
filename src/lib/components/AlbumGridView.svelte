@@ -3,10 +3,11 @@
 	import { goto } from '$app/navigation';
 	import { listChildCollections } from '$lib/api/collections';
 	import { navigationStore } from '$lib/stores/navigation';
+	import { slideshowStore } from '$lib/stores/slideshow';
 	import CollectionTile from './CollectionTile.svelte';
 	import AdminTileMenu from './AdminTileMenu.svelte';
 	import MediaGrid from './MediaGrid.svelte';
-	import type { MediaItemView } from '$lib/types';
+	import type { PhotoItem } from '$lib/types';
 	import { authStore } from '$lib/stores/auth';
 	import { adminCreateJob, adminUploadCollectionCover } from '$lib/api/admin';
 	import { bumpCoverBust } from '$lib/stores/coverBust';
@@ -31,9 +32,15 @@
 		goto(`/collection/${id}`);
 	}
 
-	function handleItemClick(item: MediaItemView, _index: number) {
+	function handleItemClick(item: PhotoItem, _index: number) {
+		slideshowStore.set({
+			collectionId,
+			items: [item],
+			total: 0,
+			params: { sortOrder: 'asc', recursive: false }
+		});
 		goto(
-			`/collection/${collectionId}/slideshow?autoplay=false&order=asc&recursive=false&start=${item.id}&name=${encodeURIComponent(collectionName)}`
+			`/collection/${collectionId}/items/${item.id}/slideshow/album?name=${encodeURIComponent(collectionName)}`
 		);
 	}
 </script>

@@ -1,11 +1,11 @@
 <script lang="ts">
-	import type { SlideshowItem } from '$lib/types';
+	import type { PhotoItem } from '$lib/types';
 	import { imageVariantUrl, dziManifestUrl } from '$lib/api/media';
 	import { selectVariant } from '$lib/utils/variant';
 	import OpenSeadragon from 'openseadragon';
 
 	interface Props {
-		item: SlideshowItem;
+		item: PhotoItem;
 		active: boolean;
 		zoomed?: boolean;
 		onZoom?: () => void;

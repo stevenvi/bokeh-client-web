@@ -1,10 +1,10 @@
 <script lang="ts">
 	import { goto } from '$app/navigation';
 	import { createQuery } from '@tanstack/svelte-query';
-	import { listItems } from '$lib/api/collections';
+	import { listVideos } from '$lib/api/collections';
 	import { videoCoverUrl } from '$lib/api/video';
 	import { mediaPlayer } from '$lib/stores/mediaPlayer';
-	import type { CollectionView, MediaItemView } from '$lib/types';
+	import type { CollectionView, VideoItemView } from '$lib/types';
 	import AdminTileMenu from './AdminTileMenu.svelte';
 	import { authStore } from '$lib/stores/auth';
 	import { adminCreateJob, adminUploadVideoCover } from '$lib/api/admin';
@@ -20,29 +20,29 @@
 	// Server auto-adds include_descendants for video:movie type
 	const itemsQuery = $derived(
 		createQuery({
-			queryKey: ['collection', collection.id, 'items'],
-			queryFn: () => listItems(collection.id, 1, 200)
+			queryKey: ['collection', collection.id, 'videos'],
+			queryFn: () => listVideos(collection.id, 1, 200)
 		})
 	);
 
 	const items = $derived($itemsQuery.data?.items ?? []);
 
-	function formatYear(item: MediaItemView): string | null {
-		const date = item.video?.date;
+	function formatYear(item: VideoItemView): string | null {
+		const date = item.date;
 		if (!date) return null;
 		return date.slice(0, 4);
 	}
 
-	function progressPercent(item: MediaItemView): number | null {
-		const bookmark = item.video?.bookmark_seconds;
-		const duration = item.video?.duration_seconds;
+	function progressPercent(item: VideoItemView): number | null {
+		const bookmark = item.bookmark_seconds;
+		const duration = item.duration_seconds;
 		if (bookmark == null || !duration) return null;
 		return Math.min(100, (bookmark / duration) * 100);
 	}
 
-	function onCardClick(item: MediaItemView) {
+	function onCardClick(item: VideoItemView) {
 		if ($mediaPlayer.type === 'video' && $mediaPlayer.itemId === item.id) {
-			goto(`/watch/${item.id}`);
+			goto(`/collection/${collection.id}/items/${item.id}/watch`);
 			return;
 		}
 		mediaPlayer.playVideo({
@@ -51,10 +51,10 @@
 			collectionId: collection.id,
 			collectionName: collection.name,
 			collectionType: collection.type,
-			bookmarkSeconds: item.video?.bookmark_seconds ?? null,
+			bookmarkSeconds: item.bookmark_seconds ?? null,
 			thumbnailUrl: videoCoverUrl(item.id)
 		});
-		goto(`/watch/${item.id}`);
+		goto(`/collection/${collection.id}/items/${item.id}/watch`);
 	}
 </script>
 

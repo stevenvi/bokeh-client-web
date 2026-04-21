@@ -1,11 +1,12 @@
 <script lang="ts">
-	import { createInfiniteQuery, createQuery, useQueryClient } from '@tanstack/svelte-query';
+	import { createInfiniteQuery, createQuery } from '@tanstack/svelte-query';
 	import { goto } from '$app/navigation';
-	import { slideshowPage, slideshowMetadata } from '$lib/api/collections';
+	import { listPhotos, photoStats } from '$lib/api/collections';
 	import { navigationStore } from '$lib/stores/navigation';
+	import { slideshowStore } from '$lib/stores/slideshow';
 	import MonthGroup from './MonthGroup.svelte';
 	import YearScrollbar from './YearScrollbar.svelte';
-	import type { SlideshowItem } from '$lib/types';
+	import type { PhotoItem, SlideshowMonthCount } from '$lib/types';
 
 	interface Props {
 		collectionId: number;
@@ -13,8 +14,6 @@
 	}
 
 	let { collectionId, collectionName }: Props = $props();
-
-	const queryClient = useQueryClient();
 
 	// Jump target: when set, the infinite query starts from this month instead of the beginning.
 	// Restored from navigationStore so returning from slideshow uses the same query cache key.
@@ -29,37 +28,62 @@
 		};
 	});
 
+	/** Compute offset for a YYYY-MM jump target given the months array (desc order). */
+	function computeOffset(months: SlideshowMonthCount[], date: string): number {
+		const [yearStr, monthStr] = date.split('-');
+		const targetYear = parseInt(yearStr, 10);
+		const targetMonth = parseInt(monthStr, 10);
+		let offset = 0;
+		for (const m of months) {
+			if (m.year > targetYear || (m.year === targetYear && m.month > targetMonth)) {
+				offset += m.count;
+			}
+		}
+		return offset;
+	}
+
+	// Stats query — used for year scrollbar and jump-to-month offset computation
+	const statsQuery = $derived(
+		createQuery({
+			queryKey: ['photoStats', collectionId, 'recursive'],
+			queryFn: () => photoStats(collectionId, true)
+		})
+	);
+
+	// Compute initial offset from jump target + stats
+	const initialOffset = $derived.by(() => {
+		if (!jumpTarget) return 0;
+		const months = $statsQuery.data?.months;
+		if (!months) return 0;
+		return computeOffset(months, jumpTarget);
+	});
+
 	const waterfallQuery = $derived(
 		createInfiniteQuery({
 			queryKey: ['waterfall', collectionId, jumpTarget],
 			queryFn: ({ pageParam }) =>
-				slideshowPage(collectionId, {
-					order: 'desc',
+				listPhotos(collectionId, {
+					sortOrder: 'desc',
 					recursive: true,
-					cursor: pageParam as string | null,
-					startDate: pageParam === null ? jumpTarget : null
+					offset: pageParam as number,
+					limit: 200
 				}),
-			initialPageParam: null as string | null,
-			getNextPageParam: (lastPage) => lastPage.next_cursor ?? undefined
+			initialPageParam: initialOffset,
+			getNextPageParam: (lastPage, allPages) => {
+				const total = $statsQuery.data?.total;
+				if (total != null && allPages.flatMap((p) => p.items).length >= total) return undefined;
+				return lastPage.items.length < lastPage.limit
+					? undefined
+					: lastPage.offset + lastPage.limit;
+			}
 		})
 	);
 
-	const allItems = $derived(
-		($waterfallQuery.data?.pages ?? []).flatMap((p) => p.items)
-	);
-
-	// Metadata query — fires after first page loads
-	const metadataQuery = $derived(
-		createQuery({
-			queryKey: ['slideshow-metadata', collectionId],
-			queryFn: () => slideshowMetadata(collectionId, true),
-			enabled: allItems.length > 0
-		})
-	);
+	const allItems = $derived(($waterfallQuery.data?.pages ?? []).flatMap((p) => p.items));
 
 	const monthGroups = $derived(() => {
-		const groups: { label: string; date: string; items: SlideshowItem[] }[] = [];
-		const map = new Map<string, SlideshowItem[]>();
+		const groups: { label: string; date: string; items: PhotoItem[] }[] = [];
+		const map = new Map<string, PhotoItem[]>();
 
 		for (const item of allItems) {
 			const d = new Date(item.created_at ?? new Date().toISOString());
@@ -89,7 +113,9 @@
 	}
 
 	$effect(() => {
-		function onResize() { columnCount = getColumnCount(); }
+		function onResize() {
+			columnCount = getColumnCount();
+		}
 		window.addEventListener('resize', onResize);
 		return () => window.removeEventListener('resize', onResize);
 	});
@@ -101,7 +127,11 @@
 		if (!sentinel) return;
 		const observer = new IntersectionObserver(
 			([entry]) => {
-				if (entry.isIntersecting && $waterfallQuery.hasNextPage && !$waterfallQuery.isFetchingNextPage) {
+				if (
+					entry.isIntersecting &&
+					$waterfallQuery.hasNextPage &&
+					!$waterfallQuery.isFetchingNextPage
+				) {
 					$waterfallQuery.fetchNextPage();
 				}
 			},
@@ -147,21 +177,23 @@
 		return () => window.removeEventListener('scroll', onScroll);
 	});
 
-	function handleItemClick(item: SlideshowItem) {
-		const seed = encodeURIComponent(JSON.stringify(allItems));
-		goto(
-			`/collection/${collectionId}/slideshow?autoplay=false&order=desc&recursive=true&start=${item.id}&seed=${seed}&name=${encodeURIComponent(collectionName)}`
-		);
+	function handleItemClick(item: PhotoItem) {
+		slideshowStore.set({
+			collectionId,
+			items: allItems,
+			total: $statsQuery.data?.total ?? 0,
+			params: { sortOrder: 'desc', recursive: true }
+		});
+		goto(`/collection/${collectionId}/items/${item.id}/slideshow/waterfall?name=${encodeURIComponent(collectionName)}`);
 	}
 
 	// Whether the year scrollbar will be visible (mirrors its internal logic)
 	const showScrollbar = $derived(() => {
-		const months = $metadataQuery.data?.months;
+		const months = $statsQuery.data?.months;
 		if (!months || months.length < 6) return false;
 		const totalCount = months.reduce((sum, m) => sum + m.count, 0);
 		return totalCount > 200;
 	});
-
 </script>
 
 <div class="relative {showScrollbar() ? 'pr-10 lg:pr-14' : ''}">
@@ -192,8 +224,10 @@
 	{/if}
 
 	<YearScrollbar
-		metadata={$metadataQuery.data?.months ?? null}
+		metadata={$statsQuery.data?.months ?? null}
 		{currentDate}
-		onJump={(date) => { jumpTarget = date; }}
+		onJump={(date) => {
+			jumpTarget = date;
+		}}
 	/>
 </div>

@@ -4,7 +4,7 @@
 	import { useQueryClient } from '@tanstack/svelte-query';
 	import { mediaPlayer } from '$lib/stores/mediaPlayer';
 	import { setBookmark, clearBookmark } from '$lib/api/video';
-	import type { MediaItemDetail } from '$lib/types';
+	import type { VideoItemView } from '$lib/types';
 	import type { ItemsPage } from '$lib/api/collections';
 
 	const queryClient = useQueryClient();
@@ -112,26 +112,21 @@
 	let lastBookmarkSecond = -1;
 
 	function updateLocalBookmark(itemId: number, positionSeconds: number) {
-		queryClient.setQueryData(['media', itemId], (old: MediaItemDetail | undefined) => {
-			if (!old?.video) return old;
-			return { ...old, video: { ...old.video, bookmark_seconds: positionSeconds } };
-		});
-
 		const collId = $mediaPlayer.collectionId;
 		if (collId == null) return;
 		const patchItems = (old: ItemsPage | undefined): ItemsPage | undefined => {
 			if (!old) return old;
 			return {
 				...old,
-				items: old.items.map((item) =>
-					item.id === itemId && item.video
-						? { ...item, video: { ...item.video, bookmark_seconds: positionSeconds } }
+				items: old.items.map((item: VideoItemView) =>
+					item.id === itemId
+						? { ...item, bookmark_seconds: positionSeconds }
 						: item
 				)
 			};
 		};
-		queryClient.setQueryData(['collection', collId, 'items'], patchItems);
-		queryClient.setQueryData(['collection', collId, 'items', 'local'], patchItems);
+		queryClient.setQueryData(['collection', collId, 'videos'], patchItems);
+		queryClient.setQueryData(['collection', collId, 'videos', 'local'], patchItems);
 	}
 
 	function onVideoTimeUpdate() {
@@ -558,7 +553,7 @@
 				<!-- svelte-ignore a11y_no_static_element_interactions -->
 				<div
 					class="min-w-0 flex-1 cursor-pointer"
-					onclick={() => goto(`/watch/${ps.itemId}`)}
+					onclick={() => ps.collectionId != null && goto(`/collection/${ps.collectionId}/items/${ps.itemId}/watch`)}
 				>
 					<p class="text-text-primary truncate text-sm font-medium">{ps.title}</p>
 					<p class="text-text-muted truncate text-xs">{ps.subtitle}</p>

@@ -1,11 +1,10 @@
 <script lang="ts">
-	import type { SlideshowItem } from '$lib/types';
-	import type { MediaItemDetail } from '$lib/types';
+	import type { PhotoItem } from '$lib/types';
 
 	interface Props {
-		item: SlideshowItem;
-		detail: MediaItemDetail | null;
+		item: PhotoItem;
 		collectionName: string;
+		total: number;
 		hasPrev: boolean;
 		hasNext: boolean;
 		onPrev: () => void;
@@ -15,16 +14,14 @@
 
 	let {
 		item,
-		detail,
 		collectionName,
+		total,
 		hasPrev,
 		hasNext,
 		onPrev,
 		onNext,
 		onBack
 	}: Props = $props();
-
-	const meta = $derived(detail?.photo ?? null);
 
 	function fmt(val: number | string | null, unit = ''): string {
 		if (val == null) return '—';
@@ -72,6 +69,7 @@
 			Back
 		</button>
 		<span class="flex-1 select-none text-center text-sm font-medium text-white/90">{collectionName}</span>
+		<span class="text-white/80 text-sm font-medium">{item.ordinal + 1} / {total}</span>
 	</div>
 
 	<!-- Center nav arrows -->
@@ -107,13 +105,13 @@
 
 	<!-- Bottom EXIF bar (large screen) -->
 	<div class="pointer-events-auto select-none bg-gradient-to-t from-black/70 to-transparent px-4 py-3 text-center text-xs text-white/80">
-		{fmtDate(meta?.created_at ?? item.created_at)} &nbsp;|&nbsp;
-		{fmtAperture(meta?.aperture ?? null)} &nbsp;|&nbsp;
-		{@html fmtShutter(meta?.shutter_speed ?? null)} &nbsp;|&nbsp;
-		ISO {fmt(meta?.iso ?? null)} &nbsp;|&nbsp;
-		{fmt(meta?.focal_length_35mm_equiv ?? meta?.focal_length_mm ?? null, 'mm')}
+		{fmtDate(item.created_at)} &nbsp;|&nbsp;
+		{fmtAperture(item.aperture)} &nbsp;|&nbsp;
+		{@html fmtShutter(item.shutter_speed)} &nbsp;|&nbsp;
+		ISO {fmt(item.iso)} &nbsp;|&nbsp;
+		{fmt(item.focal_length_35mm_equiv ?? item.focal_length_mm, 'mm')}
 		<br>
-		{fmt(meta?.camera_model ?? null)} &nbsp;|&nbsp; {fmt(meta?.lens_model ?? null)}
+		{fmt(item.camera_model)} &nbsp;|&nbsp; {fmt(item.lens_model)}
 	</div>
 </div>
 
@@ -131,6 +129,7 @@
 			</svg>
 		</button>
 		<span class="flex-1 select-none truncate text-center text-sm font-medium text-white/90">{collectionName}</span>
+		<span class="text-white/80 text-sm font-medium">{item.ordinal + 1} / {total}</span>
 	</div>
 
 	<!-- Center nav arrows -->
@@ -166,10 +165,10 @@
 
 	<!-- Bottom EXIF strip (mobile) -->
 	<div class="pointer-events-auto select-none bg-gradient-to-t from-black/70 to-transparent px-4 py-3 text-center text-xs text-white/70">
-		{fmtDate(meta?.created_at ?? item.created_at)} &nbsp;&bull;&nbsp;
-		{fmtAperture(meta?.aperture ?? null)} &nbsp;&bull;&nbsp;
-		{@html fmtShutter(meta?.shutter_speed ?? null)} &nbsp;&bull;&nbsp;
-		ISO {fmt(meta?.iso ?? null)} &nbsp;&bull;&nbsp;
-		{fmt(meta?.focal_length_35mm_equiv ?? meta?.focal_length_mm ?? null, 'mm')}
+		{fmtDate(item.created_at)} &nbsp;&bull;&nbsp;
+		{fmtAperture(item.aperture)} &nbsp;&bull;&nbsp;
+		{@html fmtShutter(item.shutter_speed)} &nbsp;&bull;&nbsp;
+		ISO {fmt(item.iso)} &nbsp;&bull;&nbsp;
+		{fmt(item.focal_length_35mm_equiv ?? item.focal_length_mm, 'mm')}
 	</div>
 </div>

@@ -1,20 +1,20 @@
 <script lang="ts">
 	import MediaTile from './MediaTile.svelte';
-	import type { SlideshowItem } from '$lib/types';
+	import type { PhotoItem } from '$lib/types';
 
 	interface Props {
 		label: string;
 		date: string; // "YYYY-MM" for scroll tracking
-		items: SlideshowItem[];
+		items: PhotoItem[];
 		columnCount: number;
-		onItemClick: (item: SlideshowItem) => void;
+		onItemClick: (item: PhotoItem) => void;
 	}
 
 	let { label, date, items, columnCount, onItemClick }: Props = $props();
 
 	// Distribute items into the shortest column (by estimated height) for balanced fill.
 	const columns = $derived(() => {
-		const cols: SlideshowItem[][] = Array.from({ length: columnCount }, () => []);
+		const cols: PhotoItem[][] = Array.from({ length: columnCount }, () => []);
 		const heights = new Array<number>(columnCount).fill(0);
 		for (const item of items) {
 			// Find the shortest column (ties go to the leftmost)

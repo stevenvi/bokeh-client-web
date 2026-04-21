@@ -1,11 +1,7 @@
 import { get } from 'svelte/store';
 import { apiFetch } from './client';
 import { appStore } from '$lib/stores/app';
-import type { MediaItemDetail, ImageVariant } from '$lib/types';
-
-export function getMediaItem(id: number): Promise<MediaItemDetail> {
-	return apiFetch<MediaItemDetail>(`/api/v1/media/${id}`);
-}
+import type { ImageVariant } from '$lib/types';
 
 function base(): string {
 	return get(appStore).serverUrl ?? '';

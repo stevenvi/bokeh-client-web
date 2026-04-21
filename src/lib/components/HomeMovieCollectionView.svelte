@@ -1,12 +1,12 @@
 <script lang="ts">
 	import { goto } from '$app/navigation';
 	import { createQuery } from '@tanstack/svelte-query';
-	import { listItems, listChildCollections } from '$lib/api/collections';
+	import { listVideos, listChildCollections } from '$lib/api/collections';
 	import { videoCoverUrl } from '$lib/api/video';
 	import { collectionCoverUrl } from '$lib/api/media';
 	import { mediaPlayer } from '$lib/stores/mediaPlayer';
 	import { navigationStore } from '$lib/stores/navigation';
-	import type { CollectionView, MediaItemView } from '$lib/types';
+	import type { CollectionView, VideoItemView } from '$lib/types';
 	import AdminTileMenu from './AdminTileMenu.svelte';
 	import { authStore } from '$lib/stores/auth';
 	import { adminCreateJob, adminUploadCollectionCover, adminUploadVideoCover } from '$lib/api/admin';
@@ -29,17 +29,17 @@
 	// Fetch items for current collection only (non-recursive)
 	const itemsQuery = $derived(
 		createQuery({
-			queryKey: ['collection', collection.id, 'items', 'local'],
-			queryFn: () => listItems(collection.id, 1, 200)
+			queryKey: ['collection', collection.id, 'videos', 'local'],
+			queryFn: () => listVideos(collection.id, 1, 200)
 		})
 	);
 
 	const childCollections = $derived($childCollectionsQuery.data ?? []);
 	const items = $derived($itemsQuery.data?.items ?? []);
 
-	function formatDate(item: MediaItemView): string | null {
-		const date = item.video?.date;
-		const endDate = item.video?.end_date;
+	function formatDate(item: VideoItemView): string | null {
+		const date = item.date;
+		const endDate = item.end_date;
 		if (!date) return null;
 
 		// Parse date components
@@ -72,16 +72,16 @@
 		return `${monthNames[month - 1]} ${day}, ${year}`;
 	}
 
-	function progressPercent(item: MediaItemView): number | null {
-		const bookmark = item.video?.bookmark_seconds;
-		const duration = item.video?.duration_seconds;
+	function progressPercent(item: VideoItemView): number | null {
+		const bookmark = item.bookmark_seconds;
+		const duration = item.duration_seconds;
 		if (bookmark == null || !duration) return null;
 		return Math.min(100, (bookmark / duration) * 100);
 	}
 
-	function onVideoClick(item: MediaItemView) {
+	function onVideoClick(item: VideoItemView) {
 		if ($mediaPlayer.type === 'video' && $mediaPlayer.itemId === item.id) {
-			goto(`/watch/${item.id}`);
+			goto(`/collection/${collection.id}/items/${item.id}/watch`);
 			return;
 		}
 		mediaPlayer.playVideo({
@@ -90,10 +90,10 @@
 			collectionId: collection.id,
 			collectionName: collection.name,
 			collectionType: collection.type,
-			bookmarkSeconds: item.video?.bookmark_seconds ?? null,
+			bookmarkSeconds: item.bookmark_seconds ?? null,
 			thumbnailUrl: videoCoverUrl(item.id)
 		});
-		goto(`/watch/${item.id}`);
+		goto(`/collection/${collection.id}/items/${item.id}/watch`);
 	}
 
 	function onCollectionClick(collectionId: number, collectionName: string) {
@@ -192,8 +192,8 @@
 							{#if dateStr}
 								<p class="text-text-muted text-xs truncate">{dateStr}</p>
 							{/if}
-							{#if item.video?.author}
-								<p class="text-text-muted text-xs truncate">{item.video.author}</p>
+							{#if item.author}
+								<p class="text-text-muted text-xs truncate">{item.author}</p>
 							{/if}
 						</button>
 						{#if $authStore?.isAdmin}
