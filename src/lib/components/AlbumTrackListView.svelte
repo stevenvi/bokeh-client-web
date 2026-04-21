@@ -128,19 +128,19 @@
 						{#each tracks as track, i}
 							{@const globalIndex = data.tracks.indexOf(track)}
 							<button
-								class="flex w-full items-center gap-3 px-2 py-2.5 text-left transition-colors hover:bg-surface-raised {globalIndex % 2 === 0 ? 'bg-[rgb(26_26_26/0.25)]' : ''}"
+								class="group flex w-full items-center gap-3 px-2 py-2.5 text-left transition-colors hover:bg-surface-raised {globalIndex % 2 === 0 ? 'bg-teal-900/40' : ''}"
 								onclick={() => playTrack(globalIndex)}
 							>
-								<span class="text-text-muted w-6 text-right text-sm tabular-nums">
+								<span class="w-6 flex-shrink-0 text-right text-sm tabular-nums text-black group-hover:text-gray-200">
 									{track.track_number ?? i + 1}
 								</span>
 								<div class="min-w-0 flex-1">
-									<p class="text-text-primary truncate text-sm">{track.title}</p>
+									<p class="text-white text-shadow-dark truncate text-sm">{track.title}</p>
 									{#if track.artist_name}
-										<p class="text-text-muted truncate text-xs">{track.artist_name}</p>
+										<p class="truncate text-xs text-white/65 group-hover:text-white/90">{track.artist_name}</p>
 									{/if}
 								</div>
-								<span class="text-text-muted flex-shrink-0 text-sm tabular-nums">
+								<span class="flex-shrink-0 text-sm tabular-nums text-black group-hover:text-gray-200">
 									{formatDuration(track.duration_seconds)}
 								</span>
 							</button>

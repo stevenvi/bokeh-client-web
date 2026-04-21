@@ -283,33 +283,33 @@
 								{@const isHighlighted = episode.id === highlightedEpisodeId}
 								<button
 									id="episode-{episode.id}"
-									class="relative flex w-full flex-col text-left transition-colors {isHighlighted ? 'border-l-4 border-accent bg-accent/40 hover:bg-accent/45' : 'hover:bg-surface-raised ' + (globalIndex % 2 === 0 ? 'bg-[rgb(26_26_26/0.25)]' : '')}"
+									class="group relative flex w-full flex-col text-left transition-colors {isHighlighted ? 'bg-yellow-400 hover:bg-surface-raised' : 'hover:bg-surface-raised ' + (globalIndex % 2 === 0 ? 'bg-teal-900/40' : '')}"
 									onclick={() => playEpisode(globalIndex)}
 								>
 									<div class="flex w-full items-center gap-3 px-2 py-2.5">
-										<span class="w-8 flex-shrink-0 text-right text-sm tabular-nums {isHighlighted ? 'text-accent font-bold' : 'text-text-muted'}">
+										<span class="w-8 flex-shrink-0 text-right text-sm tabular-nums {isHighlighted ? 'text-yellow-900 font-bold' : 'text-black group-hover:text-gray-200'}">
 											{episode.track_number ?? globalIndex + 1}
 										</span>
 										<div class="min-w-0 flex-1">
-											<p class="truncate text-sm {isHighlighted ? 'text-accent font-semibold' : 'text-text-primary'}">
+											<p class="truncate text-sm {isHighlighted ? 'text-yellow-900 font-semibold' : 'text-white text-shadow-dark'}">
 												{episode.title}
 											</p>
 											{#if episode.artist_name}
-												<p class="text-text-muted truncate text-xs">{episode.artist_name}</p>
+												<p class="truncate text-xs {isHighlighted ? 'text-yellow-800' : 'text-white/65 group-hover:text-white/90'}">{episode.artist_name}</p>
 											{/if}
 										</div>
 										{#if isHighlighted}
-											<svg class="text-accent h-3.5 w-3.5 flex-shrink-0" fill="currentColor" viewBox="0 0 24 24" aria-hidden="true">
+											<svg class="text-yellow-900 h-3.5 w-3.5 flex-shrink-0" fill="currentColor" viewBox="0 0 24 24" aria-hidden="true">
 												<path d="M8 5v14l11-7z" />
 											</svg>
 										{/if}
-										<span class="flex-shrink-0 text-sm tabular-nums {isHighlighted ? 'text-accent' : 'text-text-muted'}">
+										<span class="flex-shrink-0 text-sm tabular-nums {isHighlighted ? 'text-yellow-900' : 'text-black group-hover:text-gray-200'}">
 											{formatDuration(episode.duration_seconds)}
 										</span>
 									</div>
 									{#if isHighlighted && bookmarkProgressPct > 0}
-										<div class="h-1 w-full bg-accent/20">
-											<div class="h-full bg-accent" style="width: {bookmarkProgressPct}%"></div>
+										<div class="h-1 w-full bg-black/40">
+											<div class="h-full bg-red-500" style="width: {bookmarkProgressPct}%"></div>
 										</div>
 									{/if}
 								</button>

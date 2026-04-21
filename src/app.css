@@ -90,6 +90,11 @@ body {
 	outline-offset: 2px;
 }
 
+/* Strong dark shadow for titles placed over images or tinted backgrounds */
+.text-shadow-dark {
+	text-shadow: 1px 1px 4px rgba(0, 0, 0, 0.85), 0 0 6px rgba(0, 0, 0, 0.5);
+}
+
 /* Smooth transitions for interactive elements */
 a,
 button {

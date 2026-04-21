@@ -53,9 +53,9 @@
 		</div>
 	</div>
 	<div class="mt-2">
-		<p class="text-text-primary line-clamp-2 text-sm font-medium">{name}</p>
+		<p class="text-white text-shadow-dark line-clamp-2 text-sm font-medium">{name}</p>
 		{#if date}
-			<p class="text-text-primary text-xs mt-1">
+			<p class="text-text-muted text-xs mt-1">
 				{new Date(date).toLocaleDateString('en-US', { year: 'numeric', month: 'short', day: 'numeric' })}
 			</p>
 		{/if}

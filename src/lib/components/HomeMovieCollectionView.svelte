@@ -136,7 +136,7 @@
 										/>
 									{/key}
 								</div>
-								<p class="text-text-primary mt-2 truncate text-sm font-medium">{col.name}</p>
+								<p class="text-text-primary text-shadow-dark mt-2 truncate text-sm font-medium">{col.name}</p>
 							</button>
 							{#if $authStore?.isAdmin}
 								<div class="absolute top-1 right-1 z-10" onclick={(e) => e.stopPropagation()}>
@@ -188,7 +188,7 @@
 									</div>
 								{/if}
 							</div>
-							<p class="text-text-primary mt-2 truncate text-sm font-medium">{item.title}</p>
+							<p class="text-text-primary text-shadow-dark mt-2 truncate text-sm font-medium">{item.title}</p>
 							{#if dateStr}
 								<p class="text-text-muted text-xs truncate">{dateStr}</p>
 							{/if}

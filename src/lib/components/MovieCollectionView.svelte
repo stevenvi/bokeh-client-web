@@ -101,7 +101,7 @@
 							{/if}
 						</div>
 						<!-- Title + year -->
-						<p class="text-text-primary mt-2 truncate text-sm font-medium">{item.title}</p>
+						<p class="text-text-primary text-shadow-dark mt-2 truncate text-sm font-medium">{item.title}</p>
 						{#if year}
 							<p class="text-text-muted text-xs">{year}</p>
 						{/if}
