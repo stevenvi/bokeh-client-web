@@ -37,6 +37,7 @@
 	});
 
 	let showDzi = $state(false);
+	let dziLoading = $state(false);
 	let hideBackdrop = $state(false);
 	let dziFadingOut = $state(false);
 	let dziContainer: HTMLDivElement | null = $state(null);
@@ -50,6 +51,7 @@
 	$effect(() => {
 		item; // track
 		showDzi = false;
+		dziLoading = false;
 		hideBackdrop = false;
 		dziFadingOut = false;
 		if (exitTimer) { clearTimeout(exitTimer); exitTimer = null; }
@@ -66,16 +68,6 @@
 		}
 	});
 
-	// Fade out backdrop image a few seconds after DZI activates
-	let backdropTimer: ReturnType<typeof setTimeout> | null = null;
-	$effect(() => {
-		if (showDzi) {
-			backdropTimer = setTimeout(() => { hideBackdrop = true; }, 250);
-		} else {
-			if (backdropTimer) clearTimeout(backdropTimer);
-		}
-	});
-
 	function onFullLoad() {
 		loadedId = item.id;
 	}
@@ -83,12 +75,15 @@
 	function initDzi() {
 		if (!dziContainer || showDzi) return;
 		showDzi = true;
+		dziLoading = true;
 		onZoom?.();
 		requestAnimationFrame(() => {
 			if (!dziContainer) return;
+			// Seed OSD with the preview image so the user can zoom immediately while
+			// the high-res DZI manifest loads in the background.
 			viewer = OpenSeadragon({
 				element: dziContainer,
-				tileSources: dziManifestUrl(item.id),
+				tileSources: { type: 'image', url: imageVariantUrl(item.id, variant) },
 				showNavigationControl: false,
 				ajaxWithCredentials: true,
 				// Constrain viewport: can't zoom out past "fit", can't drag image off-screen.
@@ -104,6 +99,35 @@
 				gestureSettingsMouse: { clickToZoom: false },
 				// eslint-disable-next-line @typescript-eslint/no-explicit-any
 				gestureSettingsTouch: { dblTapToZoom: false, pinchToZoom: true } as any
+			});
+
+			// Preview image opened — begin loading DZI tiles on top. Register the
+			// world 'add-item' listener first so we can't miss it, then call
+			// addTiledImage. Because 'open' fires after the preview is already in
+			// the world, the first 'add-item' we see here is always the DZI.
+			viewer.addHandler('open', () => {
+				if (!viewer) return;
+				viewer.world.addHandler('add-item', () => {
+					// DZI manifest is fetched and the item is in the world —
+					// tiles are now loading; spinner can go.
+					dziLoading = false;
+				});
+				viewer.addTiledImage({
+					tileSource: dziManifestUrl(item.id),
+					x: 0,
+					y: 0,
+					width: 1,
+					ajaxWithCredentials: true
+				});
+			});
+
+			// First tile drawn (preview from cache — very fast) means OSD canvas is
+			// painting; fade out the <img> backdrop so only the OSD canvas shows.
+			let firstTileDrawn = false;
+			viewer.addHandler('tile-drawn', () => {
+				if (firstTileDrawn) return;
+				firstTileDrawn = true;
+				hideBackdrop = true;
 			});
 
 			// Auto-exit DZI when the user zooms all the way back to the home (fit) level.
@@ -148,8 +172,9 @@
 		if (dziFadingOut) return;
 		// Notify parent so it can reset zoomed state
 		onZoomExit?.();
-		// Immediately show the backdrop image underneath
+		// Immediately show the backdrop image underneath and dismiss any lingering spinner
 		hideBackdrop = false;
+		dziLoading = false;
 		// After 50ms, start fading out the DZI overlay
 		dziFadingOut = true;
 		exitTimer = setTimeout(() => {
@@ -258,6 +283,13 @@
 		class:dzi-fade-out={dziFadingOut}
 	></div>
 
+	<!-- Loading spinner while manifest/tiles are fetching -->
+	{#if dziLoading}
+		<div class="pointer-events-none absolute inset-0 z-10 flex items-center justify-center">
+			<div class="dzi-spinner"></div>
+		</div>
+	{/if}
+
 	<!-- Exit zoom button -->
 	{#if showDzi}
 		<button
@@ -283,5 +315,22 @@
 	.dzi-fade-out {
 		opacity: 0;
 		transition: opacity 250ms ease-out;
+	}
+
+	.dzi-spinner {
+		width: 36px;
+		height: 36px;
+		border-radius: 50%;
+		border: 3px solid rgba(255, 255, 255, 0.25);
+		border-top-color: rgba(255, 255, 255, 0.85);
+		animation: dzi-spin 0.75s linear infinite;
+		/* Subtle shadow so it's visible on both dark and light images */
+		filter: drop-shadow(0 1px 3px rgba(0, 0, 0, 0.5));
+	}
+
+	@keyframes dzi-spin {
+		to {
+			transform: rotate(360deg);
+		}
 	}
 </style>
