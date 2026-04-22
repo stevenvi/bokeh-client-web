@@ -56,7 +56,6 @@
 						id={collection.id}
 						name={collection.name}
 						type={collection.type}
-						date={collection.date}
 						onclick={() => goto(`/collection/${collection.id}`)}
 					/>
 					{#if $authStore?.isAdmin}
