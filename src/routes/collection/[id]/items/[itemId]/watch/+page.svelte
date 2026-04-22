@@ -1,6 +1,6 @@
 <script lang="ts">
 	import { page } from '$app/state';
-	import { onDestroy, onMount } from 'svelte';
+	import { onDestroy, onMount, untrack } from 'svelte';
 	import { goto } from '$app/navigation';
 	import { createQuery } from '@tanstack/svelte-query';
 	import { getCollection } from '$lib/api/collections';
@@ -20,26 +20,26 @@
 
 	$effect(() => {
 		const col = $collectionQuery.data;
-		const state = $mediaPlayer;
 		if (!col) return;
-		if (state.itemId === itemId) {
+		// Read $mediaPlayer inside untrack so timeupdate events don't re-trigger
+		// this effect 4-25x/sec, which would race with onDestroy's setIsFullPlayer(false).
+		untrack(() => {
+			const state = $mediaPlayer;
+			if (state.itemId === itemId) {
+				mediaPlayer.setIsFullPlayer(true);
+				return;
+			}
+			mediaPlayer.playVideo({
+				itemId,
+				title: '',
+				collectionId: col.id,
+				collectionName: col.name,
+				collectionType: col.type,
+				bookmarkSeconds: null,
+				thumbnailUrl: videoCoverUrl(itemId)
+			});
 			mediaPlayer.setIsFullPlayer(true);
-			return;
-		}
-		mediaPlayer.playVideo({
-			itemId,
-			title: '',
-			collectionId: col.id,
-			collectionName: col.name,
-			collectionType: col.type,
-			bookmarkSeconds: null,
-			thumbnailUrl: videoCoverUrl(itemId)
 		});
-		mediaPlayer.setIsFullPlayer(true);
-	});
-
-	$effect(() => {
-		mediaPlayer.setIsFullPlayer(true);
 	});
 
 	function goToCollection() {

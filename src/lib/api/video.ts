@@ -17,15 +17,15 @@ export function videoCoverUrl(itemId: number): string {
 	return `${base()}/images/videos/${itemId}/cover`;
 }
 
-export function setBookmark(itemId: number, positionSeconds: number): Promise<void> {
-	return apiFetch<void>(`/api/v1/media/${itemId}/bookmark`, {
+export function setBookmark(collectionId: number, itemId: number, positionSeconds: number): Promise<void> {
+	return apiFetch<void>(`/api/v1/collections/${collectionId}/items/${itemId}/bookmark`, {
 		method: 'PUT',
 		body: JSON.stringify({ position_seconds: positionSeconds })
 	});
 }
 
-export function clearBookmark(itemId: number): Promise<void> {
-	return apiFetch<void>(`/api/v1/media/${itemId}/bookmark`, {
+export function clearBookmark(collectionId: number, itemId: number): Promise<void> {
+	return apiFetch<void>(`/api/v1/collections/${collectionId}/items/${itemId}/bookmark`, {
 		method: 'DELETE'
 	});
 }

@@ -13,10 +13,10 @@
 	let videoEl: HTMLVideoElement;
 
 	function onVideoPause() {
-		if (ps.type !== 'video' || ps.itemId == null || !videoEl || videoEl.ended) return;
+		if (ps.type !== 'video' || ps.itemId == null || ps.collectionId == null || !videoEl || videoEl.ended) return;
 		const pos = Math.floor(videoEl.currentTime);
 		if (pos <= 0) return;
-		setBookmark(ps.itemId, pos).catch(() => {});
+		setBookmark(ps.collectionId, ps.itemId, pos).catch(() => {});
 		updateLocalBookmark(ps.itemId, pos);
 	}
 
@@ -60,7 +60,7 @@
 		const bar = e.currentTarget as HTMLElement;
 		const rect = bar.getBoundingClientRect();
 		const ratio = Math.max(0, Math.min(1, (e.clientX - rect.left) / rect.width));
-		if (ps.duration > 0) mediaPlayer.seekTo(ratio * ps.duration);
+		if (ps.duration > 0 && isFinite(ps.duration)) mediaPlayer.seekTo(ratio * ps.duration);
 	}
 
 	function handleSeekTouch(e: TouchEvent) {
@@ -68,11 +68,11 @@
 		const rect = bar.getBoundingClientRect();
 		const touch = e.touches[0];
 		const ratio = Math.max(0, Math.min(1, (touch.clientX - rect.left) / rect.width));
-		if (ps.duration > 0) mediaPlayer.seekTo(ratio * ps.duration);
+		if (ps.duration > 0 && isFinite(ps.duration)) mediaPlayer.seekTo(ratio * ps.duration);
 	}
 
 	const progress = $derived(
-		ps.duration > 0 ? (ps.currentTime / ps.duration) * 100 : 0
+		ps.duration > 0 && isFinite(ps.duration) ? (ps.currentTime / ps.duration) * 100 : 0
 	);
 
 	// ── Audio cover ──
@@ -89,6 +89,9 @@
 	});
 
 	// ── Video loading state ──
+	// Only show spinner on initial load (new video), not during HTTP rebuffering.
+	// For raw MP4 over HTTP, the browser fires waiting/playing in rapid cycles as
+	// the download catches up to playback, which makes the spinner appear permanent.
 	let videoLoading = $state(false);
 	let lastVideoItemId: number | null = null;
 
@@ -104,9 +107,13 @@
 		videoLoading = false;
 	}
 
-	function onVideoWaiting() {
-		videoLoading = true;
+	function onVideoCanPlay() {
+		videoLoading = false;
 	}
+
+	// Intentionally not using onVideoWaiting to set videoLoading = true.
+	// HTTP progressive download fires waiting/playing constantly as the buffer
+	// fills; this keeps the initial-load spinner from re-appearing during playback.
 
 	// ── Video bookmark sync ──
 	let lastBookmarkSecond = -1;
@@ -131,30 +138,32 @@
 
 	function onVideoTimeUpdate() {
 		if (!videoEl || ps.type !== 'video') return;
-		mediaPlayer.updateCurrentTime(videoEl.currentTime);
+		// timeupdate firing means the video is producing frames — clear the spinner
+		if (videoLoading) videoLoading = false;
+		mediaPlayer.updateCurrentTime(videoEl.currentTime, videoEl.duration);
 
 		const floor = Math.floor(videoEl.currentTime);
 		if (floor > 0 && floor % 15 === 0 && floor !== lastBookmarkSecond) {
 			lastBookmarkSecond = floor;
-			if (ps.itemId != null) {
-				setBookmark(ps.itemId, floor).catch(() => {});
+			if (ps.itemId != null && ps.collectionId != null) {
+				setBookmark(ps.collectionId, ps.itemId, floor).catch(() => {});
 				updateLocalBookmark(ps.itemId, floor);
 			}
 		}
 	}
 
 	function onVideoSeeked() {
-		if (!videoEl || ps.type !== 'video' || ps.itemId == null) return;
+		if (!videoEl || ps.type !== 'video' || ps.itemId == null || ps.collectionId == null) return;
 		const pos = Math.floor(videoEl.currentTime);
 		if (pos <= 0) return;
-		setBookmark(ps.itemId, pos).catch(() => {});
+		setBookmark(ps.collectionId, ps.itemId, pos).catch(() => {});
 		updateLocalBookmark(ps.itemId, pos);
 	}
 
 	function onVideoEnded() {
 		const s = $mediaPlayer;
 		if (s.type !== 'video' || s.itemId == null) return;
-		clearBookmark(s.itemId).catch(() => {});
+		if (s.collectionId != null) clearBookmark(s.collectionId, s.itemId).catch(() => {});
 		updateLocalBookmark(s.itemId, 0);
 		const destId = s.collectionId;
 		mediaPlayer.close();
@@ -171,16 +180,16 @@
 		const pos = Math.floor(currentTime);
 		if (s.collectionType === 'video:movie') {
 			if (isFinite(duration) && duration - currentTime < 300) {
-				clearBookmark(s.itemId).catch(() => {});
+				if (s.collectionId != null) clearBookmark(s.collectionId, s.itemId).catch(() => {});
 				updateLocalBookmark(s.itemId, 0);
 			} else {
-				setBookmark(s.itemId, pos).catch(() => {});
+				if (s.collectionId != null) setBookmark(s.collectionId, s.itemId, pos).catch(() => {});
 				updateLocalBookmark(s.itemId, pos);
 			}
 		} else {
 			// home movie: no "complete" clear — only save if not at the very end
 			if (!isFinite(duration) || currentTime < duration - 1) {
-				setBookmark(s.itemId, pos).catch(() => {});
+				if (s.collectionId != null) setBookmark(s.collectionId, s.itemId, pos).catch(() => {});
 				updateLocalBookmark(s.itemId, pos);
 			}
 		}
@@ -276,7 +285,7 @@
 	playsinline
 	ontimeupdate={onVideoTimeUpdate}
 	onplaying={onVideoPlaying}
-	onwaiting={onVideoWaiting}
+	oncanplay={onVideoCanPlay}
 	onseeked={onVideoSeeked}
 	onended={onVideoEnded}
 ></video>
@@ -316,7 +325,7 @@
 			<div class="pointer-events-auto flex items-center gap-2 bg-gradient-to-b from-black/60 to-transparent px-4 py-3">
 				<button
 					class="text-white/80 hover:text-white transition-colors"
-					onclick={() => { mediaPlayer.setIsFullPlayer(false); history.back(); }}
+					onclick={() => { mediaPlayer.setIsFullPlayer(false); if (ps.collectionId != null) goto(`/collection/${ps.collectionId}`); else history.back(); }}
 					aria-label="Back"
 				>
 					<svg class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">

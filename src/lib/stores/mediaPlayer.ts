@@ -431,6 +431,29 @@ function createMediaPlayerStore() {
 		if (!videoEl) return;
 		stopAudio();
 
+		// Wire video element events before any async operations to avoid race conditions
+		function updateDuration() {
+			if (videoEl) {
+				const dur = videoEl.duration;
+				if (isFinite(dur) && dur > 0) {
+					update((s) => (s.type === 'video' ? { ...s, duration: dur } : s));
+				}
+			}
+		}
+		// loadedmetadata may fire with NaN duration if the moov atom is at the end of
+		// the file (common for camera-recorded home movies). durationchange fires again
+		// when the browser discovers the real duration after the range request for the
+		// moov atom completes.
+		videoEl.onloadedmetadata = () => {
+			updateDuration();
+			if (videoEl && params.bookmarkSeconds && isFinite(videoEl.duration)) {
+				videoEl.currentTime = params.bookmarkSeconds;
+			}
+		};
+		videoEl.ondurationchange = updateDuration;
+		videoEl.onplay = () => update((s) => (s.type === 'video' ? { ...s, isPlaying: true } : s));
+		videoEl.onpause = () => update((s) => (s.type === 'video' ? { ...s, isPlaying: false } : s));
+
 		update((s) => ({
 			...s,
 			type: 'video' as const,
@@ -470,6 +493,13 @@ function createMediaPlayerStore() {
 					hlsInstance.on(Hls.Events.MANIFEST_PARSED, () => {
 						videoEl?.play().catch(() => {});
 					});
+					// eslint-disable-next-line @typescript-eslint/no-explicit-any
+					hlsInstance.on(Hls.Events.LEVEL_LOADED, (_: string, data: any) => {
+						const totalduration = data?.details?.totalduration;
+						if (totalduration && isFinite(totalduration) && totalduration > 0) {
+							update((s) => (s.type === 'video' ? { ...s, duration: totalduration } : s));
+						}
+					});
 				} else {
 					// Safari: native HLS support
 					videoEl.src = finalUrl;
@@ -482,23 +512,17 @@ function createMediaPlayerStore() {
 		} catch {
 			// stream fetch failed — no-op
 		}
-
-		// Wire video element events
-		videoEl.onloadedmetadata = () => {
-			if (videoEl) {
-				update((s) => (s.type === 'video' ? { ...s, duration: videoEl!.duration } : s));
-				if (params.bookmarkSeconds) {
-					videoEl.currentTime = params.bookmarkSeconds;
-				}
-			}
-		};
-		videoEl.onplay = () => update((s) => (s.type === 'video' ? { ...s, isPlaying: true } : s));
-		videoEl.onpause = () => update((s) => (s.type === 'video' ? { ...s, isPlaying: false } : s));
 	}
 
 	// Called by MediaPlayer component on video timeupdate (keeps state in sync + allows bookmark logic in component)
-	function updateCurrentTime(time: number) {
-		update((s) => ({ ...s, currentTime: time }));
+	function updateCurrentTime(time: number, duration?: number) {
+		update((s) => {
+			const next: MediaPlayerState = { ...s, currentTime: time };
+			if (duration != null && isFinite(duration) && duration > 0 && s.type === 'video' && s.duration !== duration) {
+				next.duration = duration;
+			}
+			return next;
+		});
 	}
 
 	function play() {
