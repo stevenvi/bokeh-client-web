@@ -204,7 +204,7 @@
 	{:else if $waterfallQuery.isError}
 		<p class="text-error px-4 py-6">Failed to load items.</p>
 	{:else if allItems.length === 0}
-		<p class="text-text-muted px-4 py-6 text-sm">No items in this collection.</p>
+		<p class="text-text-secondary px-4 py-6 text-sm">No items in this collection.</p>
 	{:else}
 		{#each monthGroups() as group (group.date)}
 			<MonthGroup

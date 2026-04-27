@@ -37,38 +37,34 @@
 	<h1 class="text-text-primary mb-6 text-2xl font-semibold">Your Library</h1>
 
 	{#if $collectionsQuery.isPending}
-		<div class="flex justify-center">
-			<div class="grid w-full max-w-sm grid-cols-2 gap-4">
-				{#each Array(2) as _}
-					<div class="animate-pulse">
-						<div class="bg-surface-raised aspect-square w-full rounded-lg"></div>
-						<div class="bg-surface-raised mt-2 h-4 w-3/4 rounded"></div>
-					</div>
-				{/each}
-			</div>
+		<div class="grid grid-cols-2 gap-4 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6">
+			{#each Array(2) as _}
+				<div class="animate-pulse">
+					<div class="bg-surface-raised aspect-square w-full rounded-lg"></div>
+					<div class="bg-surface-raised mt-2 h-4 w-3/4 rounded"></div>
+				</div>
+			{/each}
 		</div>
 	{:else if $collectionsQuery.isError}
 		<p class="text-error">Failed to load collections. Please try again.</p>
 	{:else if !hasAny}
-		<p class="text-text-muted text-center">
+		<p class="text-text-secondary text-center">
 			No collections available. An administrator needs to create and share a collection with you.
 		</p>
 	{:else}
-		<div class="flex justify-center">
-			<div class="grid w-full max-w-sm grid-cols-2 gap-4">
-				{#if hasPhoto}
-					<CategoryTile category="photo" onclick={() => goto('/photo')} />
-				{/if}
-				{#if hasAudio}
-					<CategoryTile category="audio" onclick={() => goto('/audio')} />
-				{/if}
-				{#if hasVideo}
-					<CategoryTile category="video" onclick={() => goto('/video')} />
-				{/if}
-				{#if $authStore?.isAdmin}
-					<CategoryTile category="admin" onclick={() => goto('/admin')} />
-				{/if}
-			</div>
+		<div class="grid grid-cols-2 gap-4 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6">
+			{#if hasPhoto}
+				<CategoryTile category="photo" onclick={() => goto('/photo')} />
+			{/if}
+			{#if hasAudio}
+				<CategoryTile category="audio" onclick={() => goto('/audio')} />
+			{/if}
+			{#if hasVideo}
+				<CategoryTile category="video" onclick={() => goto('/video')} />
+			{/if}
+			{#if $authStore?.isAdmin}
+				<CategoryTile category="admin" onclick={() => goto('/admin')} />
+			{/if}
 		</div>
 	{/if}
 </main>

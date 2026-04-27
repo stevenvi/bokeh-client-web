@@ -47,7 +47,7 @@
 	{:else if $collectionsQuery.isError}
 		<p class="text-error">Failed to load collections. Please try again.</p>
 	{:else if filtered.length === 0}
-		<p class="text-text-muted text-center">No audio collections available.</p>
+		<p class="text-text-secondary text-center">No audio collections available.</p>
 	{:else}
 		<div class="grid grid-cols-2 gap-4 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6">
 			{#each filtered as collection (collection.id)}
@@ -56,6 +56,7 @@
 						id={collection.id}
 						name={collection.name}
 						type={collection.type}
+						date={collection.date}
 						onclick={() => goto(`/collection/${collection.id}`)}
 					/>
 					{#if $authStore?.isAdmin}

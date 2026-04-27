@@ -44,11 +44,11 @@
 
 <div class="bg-surface-raised border-border h-56 overflow-y-auto rounded-lg border py-1">
 	{#if rootLoading}
-		<p class="text-text-muted px-3 py-2 text-xs">Loading…</p>
+		<p class="text-text-secondary px-3 py-2 text-xs">Loading…</p>
 	{:else if rootError}
 		<p class="text-error px-3 py-2 text-xs">Failed to load media root.</p>
 	{:else if rootChildren.length === 0}
-		<p class="text-text-muted px-3 py-2 text-xs">No directories found in media root.</p>
+		<p class="text-text-secondary px-3 py-2 text-xs">No directories found in media root.</p>
 	{:else}
 		{#each rootChildren as entry (entry.name)}
 			<PathBrowserNode

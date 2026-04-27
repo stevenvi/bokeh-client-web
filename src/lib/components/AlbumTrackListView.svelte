@@ -111,7 +111,7 @@
 					{/if}
 				</div>
 				<h1 class="text-text-primary mt-3 text-center text-xl font-bold">{albumName}</h1>
-				<p class="text-text-muted text-center text-sm">
+				<p class="text-text-secondary text-center text-sm">
 					{data.tracks.length} {data.tracks.length === 1 ? 'track' : 'tracks'} &middot; {formatTotalDuration(data.total_duration)}
 				</p>
 			</div>
@@ -120,7 +120,7 @@
 			<div class="min-w-0 flex-1">
 				{#each discGroups as [discNum, tracks], groupIdx}
 					{#if discCount > 1}
-						<h2 class="text-text-muted mb-2 text-xs font-semibold uppercase tracking-wide" class:mt-6={groupIdx > 0}>
+						<h2 class="text-text-secondary mb-2 text-xs font-semibold uppercase tracking-wide" class:mt-6={groupIdx > 0}>
 							Disc {discNum}
 						</h2>
 					{/if}
@@ -140,7 +140,7 @@
 										<p class="truncate text-xs text-white/65 group-hover:text-white/90">{track.artist_name}</p>
 									{/if}
 								</div>
-								<span class="flex-shrink-0 text-sm tabular-nums text-black group-hover:text-gray-200">
+								<span class="flex-shrink-0 text-sm tabular-nums text-text-primary text-shadow-dark">
 									{formatDuration(track.duration_seconds)}
 								</span>
 							</button>

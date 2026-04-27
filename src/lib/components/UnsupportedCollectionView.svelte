@@ -12,7 +12,7 @@
 		<path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M12 9v3.75m9-.75a9 9 0 11-18 0 9 9 0 0118 0zm-9 3.75h.008v.008H12v-.008z" />
 	</svg>
 	<h2 class="text-text-primary mb-2 text-xl font-semibold">{collectionName}</h2>
-	<p class="text-text-muted text-sm">
+	<p class="text-text-secondary text-sm">
 		This content type (<code class="text-text-secondary">{collectionType}</code>) is not yet available.
 	</p>
 </div>

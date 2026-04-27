@@ -113,7 +113,7 @@
 		<!-- Sub-collections -->
 		{#if childCollections.length > 0}
 			<div class="mb-6">
-				<h2 class="text-text-muted mb-3 text-xs font-semibold uppercase tracking-wide">Collections</h2>
+				<h2 class="text-text-secondary mb-3 text-xs font-semibold uppercase tracking-wide">Collections</h2>
 				<div class="grid grid-cols-2 gap-4 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6">
 					{#each childCollections as col (col.id)}
 						<div class="relative">
@@ -156,7 +156,7 @@
 		<!-- Video items -->
 		{#if items.length > 0}
 			{#if childCollections.length > 0}
-				<h2 class="text-text-muted mb-3 text-xs font-semibold uppercase tracking-wide">Videos</h2>
+				<h2 class="text-text-secondary mb-3 text-xs font-semibold uppercase tracking-wide">Videos</h2>
 			{/if}
 			<div class="grid grid-cols-2 gap-4 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6">
 				{#each items as item (item.id)}
@@ -190,10 +190,10 @@
 							</div>
 							<p class="text-text-primary text-shadow-dark mt-2 truncate text-sm font-medium">{item.title}</p>
 							{#if dateStr}
-								<p class="text-text-muted text-xs truncate">{dateStr}</p>
+								<p class="text-text-dim text-xs truncate">{dateStr}</p>
 							{/if}
 							{#if item.author}
-								<p class="text-text-muted text-xs truncate">{item.author}</p>
+								<p class="text-text-secondary text-xs truncate">{item.author}</p>
 							{/if}
 						</button>
 						{#if $authStore?.isAdmin}
@@ -210,7 +210,7 @@
 		{/if}
 
 		{#if childCollections.length === 0 && items.length === 0}
-			<p class="text-text-muted p-6 text-center">No content found.</p>
+			<p class="text-text-secondary p-6 text-center">No content found.</p>
 		{/if}
 	{/if}
 </div>

@@ -73,6 +73,6 @@
 		<p class="text-text-primary line-clamp-2 text-sm font-medium">{name}</p>
 	</button>
 	{#if year}
-		<p class="text-text-muted text-xs">{year}</p>
+		<p class="text-text-dim text-xs">{year}</p>
 	{/if}
 </div>

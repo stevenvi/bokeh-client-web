@@ -324,7 +324,7 @@
 		{#if !isBrowserFullscreen}
 			<div class="pointer-events-auto flex items-center gap-2 bg-gradient-to-b from-black/60 to-transparent px-4 py-3">
 				<button
-					class="text-white/80 hover:text-white transition-colors"
+					class="text-white hover:text-white/80 transition-colors"
 					onclick={() => { mediaPlayer.setIsFullPlayer(false); if (ps.collectionId != null) goto(`/collection/${ps.collectionId}`); else history.back(); }}
 					aria-label="Back"
 				>
@@ -334,7 +334,7 @@
 				</button>
 				<div>
 					<p class="text-white text-sm font-medium leading-tight">{ps.title}</p>
-					<p class="text-white/70 text-xs">{ps.subtitle}</p>
+					<p class="text-black text-xs">{ps.subtitle}</p>
 				</div>
 			</div>
 		{/if}
@@ -370,7 +370,7 @@
 					<!-- PiP -->
 					{#if canPiP}
 						<button
-							class="text-white/80 hover:text-white transition-colors p-1"
+							class="text-white hover:text-white/80 transition-colors p-1"
 							onclick={requestPiP}
 							aria-label="Picture in Picture"
 						>
@@ -383,7 +383,7 @@
 
 					<!-- Fullscreen toggle -->
 					<button
-						class="text-white/80 hover:text-white transition-colors p-1"
+						class="text-white hover:text-white/80 transition-colors p-1"
 						onclick={isBrowserFullscreen ? exitFullscreen : requestFullscreen}
 						aria-label={isBrowserFullscreen ? 'Exit fullscreen' : 'Fullscreen'}
 					>
@@ -402,7 +402,7 @@
 
 			<!-- Time + scrubber -->
 			<div class="mt-3 flex items-center gap-3">
-				<span class="text-white/80 text-xs tabular-nums w-10 text-right">{formatTime(ps.currentTime)}</span>
+				<span class="text-white text-xs tabular-nums w-10 text-right">{formatTime(ps.currentTime)}</span>
 				<!-- svelte-ignore a11y_click_events_have_key_events -->
 				<!-- svelte-ignore a11y_no_static_element_interactions -->
 				<div
@@ -412,7 +412,7 @@
 				>
 					<div class="absolute inset-y-0 left-0 bg-white rounded-full" style="width: {progress}%"></div>
 				</div>
-				<span class="text-white/80 text-xs tabular-nums w-10">{formatTime(ps.duration)}</span>
+				<span class="text-white text-xs tabular-nums w-10">{formatTime(ps.duration)}</span>
 			</div>
 		</div>
 	</div>
@@ -465,11 +465,11 @@
 				<!-- Track info -->
 				<div class="min-w-0 flex-1">
 					<p class="text-text-primary truncate text-sm font-medium">{ps.title}</p>
-					<p class="text-text-muted truncate text-xs">{ps.subtitle}</p>
+					<p class="text-text-secondary truncate text-xs">{ps.subtitle}</p>
 				</div>
 
 				<!-- Time display -->
-				<span class="text-text-muted hidden text-xs tabular-nums sm:block">
+				<span class="text-text-secondary hidden text-xs tabular-nums sm:block">
 					{formatTime(ps.currentTime)} / {formatTime(ps.duration)}
 				</span>
 
@@ -512,9 +512,9 @@
 					</button>
 
 					<button
-						class="hidden p-1.5 transition-colors sm:block"
+						class="hidden p-1.5 transition-colors hover:text-yellow-300 sm:block"
 						class:text-accent={ps.shuffle}
-						class:text-text-muted={!ps.shuffle}
+						class:text-text-secondary={!ps.shuffle}
 						onclick={() => mediaPlayer.toggleShuffle()}
 						aria-label="Toggle shuffle"
 					>
@@ -524,9 +524,9 @@
 					</button>
 
 					<button
-						class="hidden p-1.5 transition-colors sm:block"
+						class="hidden p-1.5 transition-colors hover:text-yellow-300 sm:block"
 						class:text-accent={ps.repeat !== 'none'}
-						class:text-text-muted={ps.repeat === 'none'}
+						class:text-text-secondary={ps.repeat === 'none'}
 						onclick={() => mediaPlayer.toggleRepeat()}
 						aria-label="Toggle repeat"
 					>
@@ -542,7 +542,7 @@
 					</button>
 
 					<button
-						class="text-text-muted hover:text-text-primary p-1.5 transition-colors"
+						class="text-text-secondary hover:text-warning p-1.5 transition-colors"
 						onclick={() => mediaPlayer.close()}
 						aria-label="Close player"
 					>
@@ -565,10 +565,10 @@
 					onclick={() => ps.collectionId != null && goto(`/collection/${ps.collectionId}/items/${ps.itemId}/watch`)}
 				>
 					<p class="text-text-primary truncate text-sm font-medium">{ps.title}</p>
-					<p class="text-text-muted truncate text-xs">{ps.subtitle}</p>
+					<p class="text-text-secondary truncate text-xs">{ps.subtitle}</p>
 				</div>
 
-				<span class="text-text-muted hidden text-xs tabular-nums sm:block">
+				<span class="text-text-secondary hidden text-xs tabular-nums sm:block">
 					{formatTime(ps.currentTime)} / {formatTime(ps.duration)}
 				</span>
 

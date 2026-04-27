@@ -104,7 +104,7 @@
 	<!-- Mobile: back button + title -->
 	{#if !isHome}
 		<button
-			class="text-text-muted hover:text-text-primary md:hidden"
+			class="text-text-secondary hover:text-text-primary md:hidden"
 			onclick={goBack}
 			aria-label="Go back"
 		>
@@ -124,7 +124,7 @@
 	<!-- Desktop: breadcrumb -->
 	<div class="hidden min-w-0 flex-1 items-center gap-1 md:flex" aria-label="Breadcrumb">
 		<button
-			class="text-text-muted hover:text-text-primary flex flex-shrink-0 items-center gap-1 text-sm transition-colors"
+			class="text-text-secondary hover:text-text-primary flex flex-shrink-0 items-center gap-1 text-sm transition-colors"
 			onclick={goHome}
 		>
 			<svg class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -138,7 +138,7 @@
 				<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8.25 4.5l7.5 7.5-7.5 7.5" />
 			</svg>
 			{#if seg.type === 'ellipsis'}
-				<span class="text-text-muted text-sm">...</span>
+				<span class="text-text-secondary text-sm">...</span>
 			{:else if seg.isLeaf}
 				<span class="text-text-primary min-w-0 truncate text-sm font-medium">
 					{seg.name}
@@ -158,7 +158,7 @@
 	{#if $toolbarStore}
 		<div class="flex flex-shrink-0 items-center gap-0.5">
 			<button
-				class="rounded-md p-1.5 transition-colors {$toolbarStore.mode === 'album' ? 'bg-surface-raised text-text-primary' : 'text-text-muted hover:text-text-primary'}"
+				class="rounded-md p-1.5 transition-colors {$toolbarStore.mode === 'album' ? 'bg-surface-raised text-text-primary' : 'text-text-secondary hover:text-text-primary'}"
 				onclick={() => $toolbarStore?.onModeChange('album')}
 				title="Album view"
 				aria-label="Album view"
@@ -169,7 +169,7 @@
 			</button>
 
 			<button
-				class="rounded-md p-1.5 transition-colors {$toolbarStore.mode === 'waterfall' ? 'bg-surface-raised text-text-primary' : 'text-text-muted hover:text-text-primary'}"
+				class="rounded-md p-1.5 transition-colors {$toolbarStore.mode === 'waterfall' ? 'bg-surface-raised text-text-primary' : 'text-text-secondary hover:text-text-primary'}"
 				onclick={() => $toolbarStore?.onModeChange('waterfall')}
 				title="Timeline view"
 				aria-label="Timeline view"
@@ -183,7 +183,7 @@
 
 	<!-- Hamburger button -->
 	<button
-		class="text-text-muted hover:text-text-primary flex-shrink-0 rounded-md p-1.5 transition-colors"
+		class="text-text-secondary hover:text-text-primary flex-shrink-0 rounded-md p-1.5 transition-colors"
 		onclick={() => (open = !open)}
 		aria-label="Menu"
 	>
@@ -205,7 +205,7 @@
 	<div class="bg-surface border-border fixed right-0 top-0 z-40 flex h-full w-64 flex-col border-l shadow-xl">
 		<div class="flex items-center justify-between p-4">
 			<span class="text-text-primary font-semibold">Menu</span>
-			<button onclick={close} aria-label="Close menu" class="text-text-muted hover:text-text-primary">
+			<button onclick={close} aria-label="Close menu" class="text-text-secondary hover:text-text-primary">
 				<svg class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
 					<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
 				</svg>
@@ -260,7 +260,7 @@
 				Sign Out
 			</button>
 			<button
-				class="text-text-muted hover:bg-surface-raised flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm"
+				class="text-text-secondary hover:bg-surface-raised flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm"
 				onclick={handleDisconnect}
 			>
 				<svg class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">

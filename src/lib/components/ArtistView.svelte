@@ -101,7 +101,7 @@
 			</div>
 			<div>
 				<h1 class="text-text-primary text-2xl font-bold">{artist.name}</h1>
-				<p class="text-text-muted text-sm">
+				<p class="text-text-secondary text-sm">
 					{albums.length} {albums.length === 1 ? 'album' : 'albums'}
 				</p>
 			</div>
@@ -110,7 +110,7 @@
 		<!-- Album grid -->
 		<div class="px-4 pb-4">
 			{#if albums.length === 0}
-				<p class="text-text-muted text-center">No albums found.</p>
+				<p class="text-text-secondary text-center">No albums found.</p>
 			{:else}
 				<div class="grid grid-cols-2 gap-4 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6">
 					{#each albums as album (album.album_id)}

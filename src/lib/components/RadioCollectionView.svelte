@@ -54,7 +54,7 @@
 		{:else if $showsQuery.isError}
 			<p class="text-error p-6">Failed to load shows.</p>
 		{:else if allShows.length === 0}
-			<p class="text-text-muted p-6 text-center">No shows found.</p>
+			<p class="text-text-secondary p-6 text-center">No shows found.</p>
 		{:else}
 			<div class="grid grid-cols-2 gap-4 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6">
 				{#each allShows as show (show.show_id)}

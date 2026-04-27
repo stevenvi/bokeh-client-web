@@ -45,7 +45,7 @@
 			<h1 class="text-text-primary text-3xl font-bold">Bokeh</h1>
 			{#if $appStore.serverUrl}
 				<div class="mt-2 flex items-center justify-center gap-2">
-					<p class="text-text-muted truncate text-sm">{$appStore.serverUrl}</p>
+					<p class="text-text-secondary truncate text-sm">{$appStore.serverUrl}</p>
 					<button class="text-accent text-xs hover:underline" onclick={handleDisconnect}>
 						Change
 					</button>

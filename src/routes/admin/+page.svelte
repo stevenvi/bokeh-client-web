@@ -1,6 +1,6 @@
 <script lang="ts">
 	import { goto } from '$app/navigation';
-	import { onMount } from 'svelte';
+	import { onMount, onDestroy } from 'svelte';
 	import { createQuery, useQueryClient } from '@tanstack/svelte-query';
 	import { authStore } from '$lib/stores/auth';
 	import {
@@ -252,7 +252,7 @@
 		</div>
 
 		{#if $collectionsQuery.isPending}
-			<p class="text-text-muted">Loading…</p>
+			<p class="text-text-secondary">Loading…</p>
 		{:else if $collectionsQuery.isError}
 			<p class="text-error">Failed to load collections.</p>
 		{:else}
@@ -293,7 +293,7 @@
 								</div>
 							{/key}
 							<p class="text-text-primary truncate text-sm font-medium">{coll.name}</p>
-							<p class="text-text-muted text-xs">{coll.type}</p>
+							<p class="text-text-secondary text-xs">{coll.type}</p>
 						</div>
 						<div class="absolute top-2 right-2 z-10" onclick={(e) => e.stopPropagation()}>
 							<AdminCollectionMenu collection={coll} />
@@ -317,7 +317,7 @@
 		</div>
 
 		{#if $usersQuery.isPending}
-			<p class="text-text-muted">Loading…</p>
+			<p class="text-text-secondary">Loading…</p>
 		{:else if $usersQuery.isError}
 			<p class="text-error">Failed to load users.</p>
 		{:else}
@@ -327,7 +327,7 @@
 						<p class="text-text-primary text-sm font-medium">{user.name}</p>
 						<div class="flex gap-2">
 							<button
-								class="border-border text-text-muted hover:text-text-primary rounded border px-2 py-1 text-xs"
+								class="border-border text-text-secondary hover:text-text-primary rounded border px-2 py-1 text-xs"
 								onclick={() => toastStore.show('Change password is not yet implemented.')}
 							>
 								Change Password
@@ -384,13 +384,13 @@
 		<h2 class="text-text-primary mb-4 text-lg font-semibold">Jobs</h2>
 
 		{#if $jobsQuery.isPending}
-			<p class="text-text-muted text-sm">Loading…</p>
+			<p class="text-text-secondary text-sm">Loading…</p>
 		{:else if $jobsQuery.isError}
 			<p class="text-error text-sm">Failed to load jobs.</p>
 		{:else}
 			{@const jobs = [...($jobsQuery.data?.jobs ?? [])].reverse()}
 			{#if jobs.length === 0}
-				<p class="text-text-muted text-sm">No jobs.</p>
+				<p class="text-text-secondary text-sm">No jobs.</p>
 			{:else}
 				<div class="space-y-2">
 					{#each jobs as job (job.id)}
@@ -399,14 +399,14 @@
 								<div class="min-w-0">
 									<span class="text-text-primary text-sm font-medium">{job.type}</span>
 									{#if job.related_name}
-										<span class="text-text-muted text-sm"> — {job.related_name}</span>
+										<span class="text-text-secondary text-sm"> — {job.related_name}</span>
 									{/if}
 								</div>
 								<span class="text-xs font-medium shrink-0 rounded px-2 py-0.5
 									{job.status === 'running' ? 'bg-accent/20 text-accent' :
 									 job.status === 'done' ? 'bg-green-500/20 text-green-400' :
 									 job.status === 'failed' ? 'bg-red-500/20 text-red-400' :
-									 'bg-surface text-text-muted border border-border'}"
+									 'bg-surface text-text-secondary border border-border'}"
 								>
 									{job.status}
 								</span>
@@ -429,14 +429,14 @@
 											style="width: {Math.round((job.subjobs_completed / job.total_sub_jobs) * 100)}%"
 										></div>
 									</div>
-									<p class="text-text-muted mt-1 text-xs">{job.subjobs_completed} / {job.total_sub_jobs}</p>
+									<p class="text-text-secondary mt-1 text-xs">{Math.round((displayedSubjobRatio[job.id] ?? 0) * job.total_sub_jobs)} / {job.total_sub_jobs}</p>
 								</div>
 							{/if}
 						</div>
 					{/each}
 				</div>
 				{#if ($jobsQuery.data?.total ?? 0) > jobs.length}
-					<p class="text-text-muted mt-3 text-xs">{$jobsQuery.data?.total} total jobs — showing most recent {jobs.length}</p>
+					<p class="text-text-secondary mt-3 text-xs">{$jobsQuery.data?.total} total jobs — showing most recent {jobs.length}</p>
 				{/if}
 			{/if}
 		{/if}

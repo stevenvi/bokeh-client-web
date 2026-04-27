@@ -118,7 +118,7 @@
 					autocomplete="new-password"
 				/>
 			</div>
-			<p class="text-text-muted text-xs">
+			<p class="text-text-secondary text-xs">
 				Note: changing your password will invalidate all other active sessions.
 			</p>
 			{#if pwError}
@@ -139,7 +139,7 @@
 		<h2 class="text-text-primary mb-4 text-lg font-semibold">Device History</h2>
 
 		{#if $devicesQuery.isPending}
-			<p class="text-text-muted">Loading devices…</p>
+			<p class="text-text-secondary">Loading devices…</p>
 		{:else if $devicesQuery.isError}
 			<p class="text-error">Failed to load devices.</p>
 		{:else}
@@ -159,7 +159,7 @@
 										<span class="bg-accent/20 text-accent ml-2 rounded px-2 py-0.5 text-xs">Current</span>
 									{/if}
 								</p>
-								<p class="text-text-muted text-xs">
+								<p class="text-text-secondary text-xs">
 									Last seen {new Date(device.last_seen_at).toLocaleDateString()}
 								</p>
 							</div>
@@ -186,7 +186,7 @@
 
 			{#if banned.length > 0}
 				<div>
-					<h3 class="text-text-muted mb-2 text-sm font-medium">Banned Devices</h3>
+					<h3 class="text-text-secondary mb-2 text-sm font-medium">Banned Devices</h3>
 					<div class="space-y-3">
 						{#each banned as device (device.id)}
 							<div class="bg-surface-raised border-border flex items-center justify-between rounded-lg border px-4 py-3 opacity-50">
@@ -195,7 +195,7 @@
 										{device.device_name || 'Unknown Device'}
 										<span class="text-error ml-2 text-xs">Banned</span>
 									</p>
-									<p class="text-text-muted text-xs">
+									<p class="text-text-secondary text-xs">
 										Banned {device.banned_at ? new Date(device.banned_at).toLocaleDateString() : ''}
 									</p>
 								</div>

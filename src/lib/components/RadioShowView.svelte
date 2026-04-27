@@ -237,7 +237,7 @@
 				</div>
 
 				<h1 class="text-text-primary mt-3 text-xl font-bold">{data.show.name}</h1>
-				<p class="text-text-muted text-sm">
+				<p class="text-text-secondary text-sm">
 					{data.episodes.length}
 					{data.episodes.length === 1 ? 'episode' : 'episodes'}
 					{#if totalDuration > 0}
@@ -261,7 +261,7 @@
 				{#each episodeGroups as albumGroup, albumIdx}
 					<!-- Album (grouping) header -->
 					<h2
-						class="text-text-muted mb-1 text-xs font-semibold uppercase tracking-wide"
+						class="text-text-secondary mb-1 text-xs font-semibold uppercase tracking-wide"
 						class:mt-10={albumIdx > 0}
 					>
 						{albumGroup.albumName}
@@ -270,7 +270,7 @@
 					{#each albumGroup.discs as discGroup, discIdx}
 						{#if discGroup.discLabel}
 							<h3
-								class="text-text-muted mb-1 pl-2 text-xs tracking-wide"
+								class="text-text-secondary mb-1 pl-2 text-xs tracking-wide"
 								class:mt-3={discIdx > 0}
 							>
 								{discGroup.discLabel}
@@ -303,7 +303,7 @@
 												<path d="M8 5v14l11-7z" />
 											</svg>
 										{/if}
-										<span class="flex-shrink-0 text-sm tabular-nums {isHighlighted ? 'text-yellow-900' : 'text-black group-hover:text-gray-200'}">
+										<span class="flex-shrink-0 text-sm tabular-nums {isHighlighted ? 'text-yellow-900' : 'text-text-primary text-shadow-dark'}">
 											{formatDuration(episode.duration_seconds)}
 										</span>
 									</div>

@@ -34,7 +34,7 @@
 <div class="mb-6" data-date={date}>
 	<div class="flex items-center gap-3 px-4 py-2">
 		<div class="bg-border h-px flex-1"></div>
-		<h3 class="text-text-muted text-sm font-medium">{label}</h3>
+		<h3 class="text-text-primary text-sm font-medium">{label}</h3>
 		<div class="bg-border h-px flex-1"></div>
 	</div>
 	<div class="flex gap-0.5 px-0.5">

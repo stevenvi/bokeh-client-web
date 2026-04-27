@@ -97,7 +97,7 @@
 			placeholder="Search artists..."
 			value={searchTerm}
 			oninput={onSearchInput}
-			class="bg-surface-raised text-text-primary placeholder-text-muted w-full rounded-lg border border-border px-4 py-2 text-sm focus:border-accent focus:outline-none"
+			class="bg-surface-raised text-text-primary placeholder-text-secondary w-full rounded-lg border border-border px-4 py-2 text-sm focus:border-accent focus:outline-none"
 		/>
 	</div>
 
@@ -110,7 +110,7 @@
 		{:else if $artistsQuery.isError}
 			<p class="text-error p-6">Failed to load artists.</p>
 		{:else if allArtists.length === 0}
-			<p class="text-text-muted p-6 text-center">No artists found.</p>
+			<p class="text-text-secondary p-6 text-center">No artists found.</p>
 		{:else}
 			<div class="grid grid-cols-2 gap-4 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6">
 				{#each allArtists as artist (artist.id)}

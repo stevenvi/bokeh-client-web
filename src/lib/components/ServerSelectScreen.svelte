@@ -49,7 +49,7 @@
 	<div class="w-full max-w-sm">
 		<div class="mb-8 text-center">
 			<h1 class="text-text-primary text-3xl font-bold">Bokeh</h1>
-			<p class="text-text-muted mt-1 text-sm">Enter your server address to continue</p>
+			<p class="text-text-secondary mt-1 text-sm">Enter your server address to continue</p>
 		</div>
 
 		<form

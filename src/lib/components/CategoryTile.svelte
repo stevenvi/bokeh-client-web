@@ -43,6 +43,6 @@
 		{/if}
 	</div>
 	<div class="mt-2">
-		<p class="text-text-primary text-sm font-medium">{config.label}</p>
+		<p class="text-white text-shadow-dark line-clamp-2 text-sm font-medium leading-none">{config.label}</p>
 	</div>
 </button>

@@ -66,7 +66,7 @@
 	{:else if $itemsQuery.isError}
 		<p class="text-error p-6">Failed to load movies.</p>
 	{:else if items.length === 0}
-		<p class="text-text-muted p-6 text-center">No movies found.</p>
+		<p class="text-text-secondary p-6 text-center">No movies found.</p>
 	{:else}
 		<div class="grid grid-cols-2 gap-4 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6">
 			{#each items as item (item.id)}
@@ -103,7 +103,7 @@
 						<!-- Title + year -->
 						<p class="text-text-primary text-shadow-dark mt-2 truncate text-sm font-medium">{item.title}</p>
 						{#if year}
-							<p class="text-text-muted text-xs">{year}</p>
+							<p class="text-text-dim text-xs">{year}</p>
 						{/if}
 					</button>
 					{#if $authStore?.isAdmin}
