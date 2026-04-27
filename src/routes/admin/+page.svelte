@@ -219,6 +219,45 @@
 		}
 	}
 
+	// ── Sub-job progress easing ────────────────────────────────────────────────
+	let displayedSubjobRatio = $state<Record<number, number>>({});
+	const activeAnimations = new Map<number, number>();
+
+	function easeOutCubic(t: number): number {
+		return 1 - Math.pow(1 - t, 3);
+	}
+
+	function animateJobProgress(jobId: number, from: number, to: number, duration: number) {
+		const existing = activeAnimations.get(jobId);
+		if (existing !== undefined) cancelAnimationFrame(existing);
+
+		const startTime = performance.now();
+		function tick(now: number) {
+			const t = Math.min((now - startTime) / duration, 1);
+			displayedSubjobRatio[jobId] = from + (to - from) * easeOutCubic(t);
+			if (t < 1) {
+				activeAnimations.set(jobId, requestAnimationFrame(tick));
+			} else {
+				activeAnimations.delete(jobId);
+			}
+		}
+		activeAnimations.set(jobId, requestAnimationFrame(tick));
+	}
+
+	$effect(() => {
+		for (const job of $jobsQuery.data?.jobs ?? []) {
+			if (job.supports_sub_jobs && job.total_sub_jobs > 0) {
+				const target = job.subjobs_completed / job.total_sub_jobs;
+				const current = displayedSubjobRatio[job.id] ?? 0;
+				animateJobProgress(job.id, current, target, 5000);
+			}
+		}
+	});
+
+	onDestroy(() => {
+		for (const handle of activeAnimations.values()) cancelAnimationFrame(handle);
+	});
+
 	// ── Maintenance ────────────────────────────────────────────────────────────
 	async function runMaintenance(type: string, label: string) {
 		try {
@@ -425,8 +464,8 @@
 								<div class="mt-2">
 									<div class="bg-border h-1 w-full overflow-hidden rounded-full">
 										<div
-											class="bg-accent h-full rounded-full transition-all"
-											style="width: {Math.round((job.subjobs_completed / job.total_sub_jobs) * 100)}%"
+											class="bg-accent h-full rounded-full"
+											style="width: {((displayedSubjobRatio[job.id] ?? 0) * 100).toFixed(2)}%"
 										></div>
 									</div>
 									<p class="text-text-secondary mt-1 text-xs">{Math.round((displayedSubjobRatio[job.id] ?? 0) * job.total_sub_jobs)} / {job.total_sub_jobs}</p>
