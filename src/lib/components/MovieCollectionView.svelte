@@ -1,5 +1,6 @@
 <script lang="ts">
 	import { goto } from '$app/navigation';
+	import MediaDate from './MediaDate.svelte';
 	import { createQuery } from '@tanstack/svelte-query';
 	import { listVideos } from '$lib/api/collections';
 	import { videoCoverUrl } from '$lib/api/video';
@@ -102,9 +103,7 @@
 						</div>
 						<!-- Title + year -->
 						<p class="text-text-primary text-shadow-dark mt-2 truncate text-sm font-medium">{item.title}</p>
-						{#if year}
-							<p class="text-text-dim text-xs">{year}</p>
-						{/if}
+						<MediaDate value={year?.toString()} />
 					</button>
 					{#if $authStore?.isAdmin}
 						<div class="absolute top-1 right-1 z-10" onclick={(e) => e.stopPropagation()}>

@@ -1,5 +1,6 @@
 <script lang="ts">
 	import { albumCoverUrl } from '$lib/api/music';
+	import MediaDate from './MediaDate.svelte';
 
 	interface Props {
 		albumId: number;
@@ -72,7 +73,5 @@
 	<button class="mt-2 w-full text-left hover:underline" onclick={onClickTitle}>
 		<p class="text-text-primary line-clamp-2 text-sm font-medium">{name}</p>
 	</button>
-	{#if year}
-		<p class="text-text-dim text-xs">{year}</p>
-	{/if}
+	<MediaDate value={year?.toString()} />
 </div>

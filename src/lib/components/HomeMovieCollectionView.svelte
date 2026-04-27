@@ -1,5 +1,6 @@
 <script lang="ts">
 	import { goto } from '$app/navigation';
+	import MediaDate from './MediaDate.svelte';
 	import { createQuery } from '@tanstack/svelte-query';
 	import { listVideos, listChildCollections } from '$lib/api/collections';
 	import { videoCoverUrl } from '$lib/api/video';
@@ -189,9 +190,7 @@
 								{/if}
 							</div>
 							<p class="text-text-primary text-shadow-dark mt-2 truncate text-sm font-medium">{item.title}</p>
-							{#if dateStr}
-								<p class="text-text-dim text-xs truncate">{dateStr}</p>
-							{/if}
+							<MediaDate value={dateStr} />
 							{#if item.author}
 								<p class="text-text-secondary text-xs truncate">{item.author}</p>
 							{/if}

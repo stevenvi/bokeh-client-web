@@ -1,5 +1,6 @@
 <script lang="ts">
 	import { collectionCoverUrl } from '$lib/api/media';
+	import MediaDate from './MediaDate.svelte';
 	import { coverBustStore } from '$lib/stores/coverBust';
 
 	interface Props {
@@ -11,7 +12,6 @@
 	}
 
 	let { id, name, type, date, onclick }: Props = $props();
-	const year = $derived(date ? date.slice(0, 4) : null);
 	let coverLoaded = $state(false);
 	let coverError = $state(false);
 </script>
@@ -55,8 +55,6 @@
 	</div>
 	<div class="mt-2">
 		<p class="text-white text-shadow-dark line-clamp-2 text-sm font-medium leading-none">{name}</p>
-		{#if year}
-			<p class="text-text-dim text-xs">{year}</p>
-		{/if}
+		<MediaDate value={date} />
 	</div>
 </button>
