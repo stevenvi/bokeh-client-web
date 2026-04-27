@@ -1,6 +1,7 @@
 <script lang="ts">
 	import { createInfiniteQuery, createQuery } from '@tanstack/svelte-query';
 	import { goto } from '$app/navigation';
+	import { tick } from 'svelte';
 	import { listPhotos, photoStats } from '$lib/api/collections';
 	import { navigationStore } from '$lib/stores/navigation';
 	import { slideshowStore } from '$lib/stores/slideshow';
@@ -15,16 +16,24 @@
 
 	let { collectionId, collectionName }: Props = $props();
 
-	// Jump target: when set, the infinite query starts from this month instead of the beginning.
-	// Restored from navigationStore so returning from slideshow uses the same query cache key.
-	// Uses $effect so it re-reads the correct value if collectionId changes (component reuse across navigations).
-	let jumpTarget = $state<string | null>(null);
+	type PageParam = { offset: number; limit: number };
+	const PAGE_LIMIT = 200;
+	const SERVER_MAX_LIMIT = 1000;
+
+	// Initialize synchronously so the very first render uses the correct query
+	// key — otherwise the cached infinite-query for the saved jumpTarget never
+	// shows on return from slideshow and the user gets bounced to the top.
+	let jumpTarget = $state<string | null>(navigationStore.getJumpTarget(collectionId));
+
+	// When the user clicks a sidebar position whose month isn't loaded yet,
+	// remember the requested fraction so we can scroll to it once the new
+	// query's data has rendered. Without this, the user lands at the start
+	// of the month and has to click again.
+	let pendingScrollTarget = $state<{ date: string; fractionWithin: number } | null>(null);
 
 	$effect(() => {
-		const id = collectionId;
-		jumpTarget = navigationStore.getJumpTarget(id);
 		return () => {
-			navigationStore.saveJumpTarget(id, jumpTarget);
+			navigationStore.saveJumpTarget(collectionId, jumpTarget);
 		};
 	});
 
@@ -58,23 +67,56 @@
 		return computeOffset(months, jumpTarget);
 	});
 
+	// When jumping into a specific month, bias the initial fetch to cover as
+	// much of that month as possible so the layout is stable when the user
+	// scrolls. Capped at the server-side per-page maximum.
+	const initialLimit = $derived.by(() => {
+		if (!jumpTarget) return PAGE_LIMIT;
+		const months = $statsQuery.data?.months;
+		if (!months) return PAGE_LIMIT;
+		const monthCount = monthCountFor(months, jumpTarget);
+		return Math.max(PAGE_LIMIT, Math.min(monthCount, SERVER_MAX_LIMIT));
+	});
+
+	function monthCountFor(months: SlideshowMonthCount[], date: string): number {
+		const [yStr, mStr] = date.split('-');
+		const ty = parseInt(yStr, 10);
+		const tm = parseInt(mStr, 10);
+		return months.find((m) => m.year === ty && m.month === tm)?.count ?? 0;
+	}
+
 	const waterfallQuery = $derived(
 		createInfiniteQuery({
 			queryKey: ['waterfall', collectionId, jumpTarget],
-			queryFn: ({ pageParam }) =>
-				listPhotos(collectionId, {
+			queryFn: ({ pageParam }) => {
+				const p = pageParam as PageParam;
+				return listPhotos(collectionId, {
 					sortOrder: 'desc',
 					recursive: true,
-					offset: pageParam as number,
-					limit: 200
-				}),
-			initialPageParam: initialOffset,
-			getNextPageParam: (lastPage, allPages) => {
+					offset: p.offset,
+					limit: p.limit
+				});
+			},
+			initialPageParam: { offset: initialOffset, limit: initialLimit } as PageParam,
+			getNextPageParam: (lastPage, allPages): PageParam | undefined => {
 				const total = $statsQuery.data?.total;
 				if (total != null && allPages.flatMap((p) => p.items).length >= total) return undefined;
 				return lastPage.items.length < lastPage.limit
 					? undefined
-					: lastPage.offset + lastPage.limit;
+					: { offset: lastPage.offset + lastPage.limit, limit: PAGE_LIMIT };
+			},
+			// Bidirectional pagination: when the user starts mid-collection
+			// (because they clicked the sidebar to jump), they need to be able
+			// to scroll up to load newer months. Each prepend is capped at
+			// PAGE_LIMIT so the JSON response returns quickly and the items
+			// closest to the viewport (bottom of the prepended chunk) get into
+			// the DOM fast — native lazy-loading then prioritizes thumbnails
+			// near the viewport. prependPage() loops to fill the rest of the
+			// topmost month so the layout stays stable.
+			getPreviousPageParam: (firstPage): PageParam | undefined => {
+				if (firstPage.offset <= 0) return undefined;
+				const newLimit = Math.min(PAGE_LIMIT, firstPage.offset);
+				return { offset: firstPage.offset - newLimit, limit: newLimit };
 			}
 		})
 	);
@@ -120,11 +162,11 @@
 		return () => window.removeEventListener('resize', onResize);
 	});
 
-	// Infinite scroll sentinel
-	let sentinel: HTMLDivElement | null = $state(null);
+	// Bottom sentinel (next page)
+	let bottomSentinel: HTMLDivElement | null = $state(null);
 
 	$effect(() => {
-		if (!sentinel) return;
+		if (!bottomSentinel) return;
 		const observer = new IntersectionObserver(
 			([entry]) => {
 				if (
@@ -137,44 +179,148 @@
 			},
 			{ rootMargin: '300px' }
 		);
-		observer.observe(sentinel);
+		observer.observe(bottomSentinel);
 		return () => observer.disconnect();
 	});
 
-	// Current date tracking — find which MonthGroup is at the viewport center
-	let currentDate = $state<string | null>(null);
+	// Top sentinel (previous page) — scrolling up past it loads earlier pages
+	// (newer months above the initial jump target). We capture the scroll
+	// position before the fetch and restore it after the new content has been
+	// rendered, so the user's view stays anchored to the same content.
+	let topSentinel: HTMLDivElement | null = $state(null);
+	let isPrepending = false;
 
 	$effect(() => {
-		function onScroll() {
-			const centerY = window.innerHeight / 2;
-			const elements = document.querySelectorAll<HTMLElement>('[data-date]');
-			let closest: HTMLElement | null = null;
-			let closestDist = Infinity;
-
-			for (const el of elements) {
-				const rect = el.getBoundingClientRect();
-				// Use the top of the element's bounding box distance to center
-				const dist = Math.abs(rect.top - centerY);
-				if (dist < closestDist) {
-					closestDist = dist;
-					closest = el;
+		if (!topSentinel) return;
+		const observer = new IntersectionObserver(
+			([entry]) => {
+				if (
+					entry.isIntersecting &&
+					$waterfallQuery.hasPreviousPage &&
+					!$waterfallQuery.isFetchingPreviousPage &&
+					!isPrepending
+				) {
+					void prependPage();
 				}
-				// Also check if center is within the element
-				if (rect.top <= centerY && rect.bottom >= centerY) {
-					closest = el;
-					break;
-				}
-			}
+			},
+			{ rootMargin: '300px' }
+		);
+		observer.observe(topSentinel);
+		return () => observer.disconnect();
+	});
 
-			if (closest) {
-				currentDate = closest.dataset.date ?? null;
+	function isTopSentinelInTriggerRange(): boolean {
+		if (!topSentinel) return false;
+		const rect = topSentinel.getBoundingClientRect();
+		// Mirrors the IntersectionObserver's rootMargin: '300px' against the viewport.
+		return rect.bottom > -300 && rect.top < window.innerHeight + 300;
+	}
+
+	function topMonthIsComplete(): boolean {
+		const months = $statsQuery.data?.months;
+		if (!months) return true;
+		const groups = monthGroups();
+		if (groups.length === 0) return true;
+		const top = groups[0];
+		const expected = monthCountFor(months, top.date);
+		if (expected === 0) return true;
+		return top.items.length >= expected;
+	}
+
+	async function prependPage() {
+		if (isPrepending) return;
+		isPrepending = true;
+		try {
+			// Loop while the sentinel is still in trigger range OR the topmost
+			// month is only partially loaded. The first condition handles fast
+			// scroll-up (IntersectionObserver only fires on transitions); the
+			// second guarantees a full month sits at the top so further loading
+			// doesn't shift the layout.
+			let safety = 50;
+			while (safety-- > 0 && $waterfallQuery.hasPreviousPage) {
+				const c = document.getElementById('app-scroll');
+				const oldHeight = c?.scrollHeight ?? 0;
+				const oldTop = c?.scrollTop ?? 0;
+				await $waterfallQuery.fetchPreviousPage();
+				await tick();
+				const c2 = document.getElementById('app-scroll');
+				if (c2) {
+					const delta = c2.scrollHeight - oldHeight;
+					if (delta > 0) c2.scrollTop = oldTop + delta;
+				}
+				if (!topMonthIsComplete()) continue;
+				if (!isTopSentinelInTriggerRange()) break;
 			}
+		} finally {
+			isPrepending = false;
 		}
+	}
 
-		window.addEventListener('scroll', onScroll, { passive: true });
-		// Run once on mount
-		onScroll();
-		return () => window.removeEventListener('scroll', onScroll);
+	// After a jump, scroll to the requested fraction within the target month.
+	// We must wait until the month is fully loaded — otherwise `fractionWithin`
+	// maps to a fraction of the partially loaded month element, which puts the
+	// user in the wrong place and forces the layout to shift as more pages
+	// arrive while they scroll. Stats give us the expected item count per
+	// month, so we fetch next pages until the loaded count matches before
+	// computing the scroll position.
+	$effect(() => {
+		if (!pendingScrollTarget) return;
+		const target = pendingScrollTarget;
+		let cancelled = false;
+		let attempts = 0;
+		let isFetching = false;
+
+		async function tryScroll() {
+			if (cancelled) return;
+
+			const months = $statsQuery.data?.months;
+			if (!months) {
+				if (attempts++ > 600) { pendingScrollTarget = null; return; }
+				requestAnimationFrame(tryScroll);
+				return;
+			}
+
+			const expectedCount = monthCountFor(months, target.date);
+			const grp = monthGroups().find((g) => g.date === target.date);
+			const loadedCount = grp?.items.length ?? 0;
+
+			if (expectedCount > 0 && loadedCount < expectedCount) {
+				if (
+					!isFetching &&
+					$waterfallQuery.hasNextPage &&
+					!$waterfallQuery.isFetchingNextPage
+				) {
+					isFetching = true;
+					try {
+						await $waterfallQuery.fetchNextPage();
+						await tick();
+					} finally {
+						isFetching = false;
+					}
+				}
+				if (cancelled) return;
+				if (attempts++ > 600) { pendingScrollTarget = null; return; }
+				requestAnimationFrame(tryScroll);
+				return;
+			}
+
+			const el = document.querySelector<HTMLElement>(`[data-date="${target.date}"]`);
+			const c = document.getElementById('app-scroll');
+			if (el && c) {
+				const elRect = el.getBoundingClientRect();
+				const cRect = c.getBoundingClientRect();
+				const centerY = cRect.top + cRect.height / 2;
+				const targetPoint = elRect.top + target.fractionWithin * elRect.height;
+				const offset = targetPoint - centerY;
+				c.scrollTo(0, Math.max(0, c.scrollTop + offset));
+				pendingScrollTarget = null;
+				return;
+			}
+			if (attempts++ > 600) { pendingScrollTarget = null; return; }
+			requestAnimationFrame(tryScroll);
+		}
+		requestAnimationFrame(tryScroll);
+		return () => { cancelled = true; };
 	});
 
 	function handleItemClick(item: PhotoItem) {
@@ -206,6 +352,12 @@
 	{:else if allItems.length === 0}
 		<p class="text-text-secondary px-4 py-6 text-sm">No items in this collection.</p>
 	{:else}
+		<div bind:this={topSentinel} class="h-1"></div>
+		{#if $waterfallQuery.isFetchingPreviousPage}
+			<div class="flex justify-center py-4">
+				<div class="border-accent h-6 w-6 animate-spin rounded-full border-2 border-t-transparent"></div>
+			</div>
+		{/if}
 		{#each monthGroups() as group (group.date)}
 			<MonthGroup
 				label={group.label}
@@ -215,7 +367,7 @@
 				onItemClick={handleItemClick}
 			/>
 		{/each}
-		<div bind:this={sentinel} class="h-1"></div>
+		<div bind:this={bottomSentinel} class="h-1"></div>
 		{#if $waterfallQuery.isFetchingNextPage}
 			<div class="flex justify-center py-4">
 				<div class="border-accent h-6 w-6 animate-spin rounded-full border-2 border-t-transparent"></div>
@@ -225,9 +377,9 @@
 
 	<YearScrollbar
 		metadata={$statsQuery.data?.months ?? null}
-		{currentDate}
-		onJump={(date) => {
+		onJump={(date, fractionWithin) => {
 			jumpTarget = date;
+			pendingScrollTarget = { date, fractionWithin };
 		}}
 	/>
 </div>

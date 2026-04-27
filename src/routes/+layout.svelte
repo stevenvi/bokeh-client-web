@@ -82,7 +82,7 @@
 		<!-- Authenticated app shell: fixed viewport height, player below the scrollable content area -->
 		<div class="flex h-dvh flex-col overflow-hidden">
 			<HamburgerMenu />
-			<div class="flex-1 overflow-y-auto">
+			<div id="app-scroll" class="flex-1 overflow-y-auto">
 				{#key routeKey}
 					<div class="page-transition">
 						{@render children()}
