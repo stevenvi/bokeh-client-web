@@ -28,12 +28,6 @@
 
 	const items = $derived($itemsQuery.data?.items ?? []);
 
-	function formatYear(item: VideoItemView): string | null {
-		const date = item.date;
-		if (!date) return null;
-		return date.slice(0, 4);
-	}
-
 	function progressPercent(item: VideoItemView): number | null {
 		const bookmark = item.bookmark_seconds;
 		const duration = item.duration_seconds;
@@ -72,7 +66,7 @@
 		<div class="grid grid-cols-2 gap-4 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6">
 			{#each items as item (item.id)}
 				{@const pct = progressPercent(item)}
-				{@const year = formatYear(item)}
+
 				<div class="relative">
 					<button
 						class="group flex w-full flex-col text-left"
@@ -103,7 +97,7 @@
 						</div>
 						<!-- Title + year -->
 						<p class="text-text-primary text-shadow-dark mt-2 truncate text-sm font-medium">{item.title}</p>
-						<MediaDate value={year?.toString()} />
+						<MediaDate value={item.date ?? null} />
 					</button>
 					{#if $authStore?.isAdmin}
 						<div class="absolute top-1 right-1 z-10" onclick={(e) => e.stopPropagation()}>

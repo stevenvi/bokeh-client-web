@@ -44,7 +44,6 @@ export interface VideoItemView {
 	audio_codec?: string;
 	transcoded_at?: string;
 	date?: string;
-	end_date?: string;
 	author?: string;
 	manual_thumbnail: boolean;
 	bookmark_seconds?: number;

@@ -38,41 +38,6 @@
 	const childCollections = $derived($childCollectionsQuery.data ?? []);
 	const items = $derived($itemsQuery.data?.items ?? []);
 
-	function formatDate(item: VideoItemView): string | null {
-		const date = item.date;
-		const endDate = item.end_date;
-		if (!date) return null;
-
-		// Parse date components
-		const parts = date.split('-');
-		const year = parts[0];
-		const month = parts[1] ? parseInt(parts[1], 10) : null;
-		const day = parts[2] ? parseInt(parts[2], 10) : null;
-
-		const monthNames = ['January', 'February', 'March', 'April', 'May', 'June',
-			'July', 'August', 'September', 'October', 'November', 'December'];
-		const monthAbbr = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun',
-			'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
-
-		if (!month) return year;
-
-		if (!day) {
-			return `${monthNames[month - 1]} ${year}`;
-		}
-
-		// Has end date?
-		if (endDate) {
-			const eParts = endDate.split('-');
-			const eMonth = eParts[1] ? parseInt(eParts[1], 10) : null;
-			const eDay = eParts[2] ? parseInt(eParts[2], 10) : null;
-			if (eMonth && eDay) {
-				return `${monthAbbr[month - 1]} ${day}–${eDay}, ${year}`;
-			}
-		}
-
-		return `${monthNames[month - 1]} ${day}, ${year}`;
-	}
-
 	function progressPercent(item: VideoItemView): number | null {
 		const bookmark = item.bookmark_seconds;
 		const duration = item.duration_seconds;
@@ -162,7 +127,7 @@
 			<div class="grid grid-cols-2 gap-4 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6">
 				{#each items as item (item.id)}
 					{@const pct = progressPercent(item)}
-					{@const dateStr = formatDate(item)}
+					{@const dateStr = item.date ?? null}
 					<div class="relative">
 						<button
 							class="group flex w-full flex-col text-left"
