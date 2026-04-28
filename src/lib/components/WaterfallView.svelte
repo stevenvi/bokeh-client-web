@@ -1,7 +1,7 @@
 <script lang="ts">
 	import { createInfiniteQuery, createQuery } from '@tanstack/svelte-query';
 	import { goto } from '$app/navigation';
-	import { tick } from 'svelte';
+	import { tick, untrack } from 'svelte';
 	import { listPhotos, photoStats } from '$lib/api/collections';
 	import { navigationStore } from '$lib/stores/navigation';
 	import { slideshowStore } from '$lib/stores/slideshow';
@@ -23,7 +23,7 @@
 	// Initialize synchronously so the very first render uses the correct query
 	// key — otherwise the cached infinite-query for the saved jumpTarget never
 	// shows on return from slideshow and the user gets bounced to the top.
-	let jumpTarget = $state<string | null>(navigationStore.getJumpTarget(collectionId));
+	let jumpTarget = $state<string | null>(navigationStore.getJumpTarget(untrack(() => collectionId)));
 
 	// When the user clicks a sidebar position whose month isn't loaded yet,
 	// remember the requested fraction so we can scroll to it once the new
