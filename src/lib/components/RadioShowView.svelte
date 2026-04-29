@@ -34,7 +34,7 @@
 			navigationStore.push({
 				id: showId,
 				name: $episodesQuery.data.show.name,
-				path: `/radio/show/${showId}?collection=${collectionId}`
+				path: `/audio/${collectionId}/show/${showId}`
 			});
 		}
 	});
@@ -122,7 +122,7 @@
 	// Scroll highlighted episode into view after load — only on a fresh entry
 	// to the page. If we have a saved scroll position from the breadcrumb
 	// stack, ScrollRestore handles placement and we should not override it.
-	const showPath = $derived(`/radio/show/${showId}?collection=${collectionId}`);
+	const showPath = $derived(`/audio/${collectionId}/show/${showId}`);
 	let scrolled = $state(false);
 	$effect(() => {
 		if (!$episodesQuery.data || scrolled || highlightedEpisodeId == null) return;

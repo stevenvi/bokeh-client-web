@@ -26,11 +26,11 @@
 	const allShows = $derived($showsQuery.data?.shows ?? []);
 
 	function openShow(showId: number) {
-		goto(`/radio/show/${showId}?collection=${collectionId}`);
+		goto(`/audio/${collectionId}/show/${showId}`);
 	}
 </script>
 
-<ScrollRestore path={`/collection/${collectionId}`} />
+<ScrollRestore path={`/audio/${collectionId}`} />
 
 <div class="">
 	<div class="px-4 py-4">

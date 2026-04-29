@@ -16,8 +16,9 @@
 		autoplay: boolean;
 		order: 'asc' | 'desc';
 		recursive: boolean;
-		startItem?: number | null;
+		startOrdinal?: number | null;
 		collectionName?: string;
+		onOrdinalChange?: (ordinal: number) => void;
 	}
 
 	let {
@@ -25,8 +26,9 @@
 		autoplay,
 		order,
 		recursive,
-		startItem = null,
-		collectionName = ''
+		startOrdinal = null,
+		collectionName = '',
+		onOrdinalChange
 	}: Props = $props();
 
 	// Read from store on mount
@@ -38,9 +40,10 @@
 	// svelte-ignore state_referenced_locally -- intentional: order/recursive are props used only as initial defaults
 	const storeParams = store?.params ?? { sortOrder: order === 'desc' ? 'desc' : 'asc', recursive };
 
-	// Find start item index
-	// svelte-ignore state_referenced_locally -- intentional: items used only to find initial start position
-	const startIndex = items.findIndex((i) => i.id === startItem);
+	// Find start position by ordinal in pre-loaded store items (in-app navigation).
+	// For fresh loads items will be empty; loadInitial() sets currentIndex after fetching.
+	// svelte-ignore state_referenced_locally
+	const startIndex = startOrdinal != null ? items.findIndex((i) => i.ordinal === startOrdinal) : -1;
 	// svelte-ignore state_referenced_locally
 	let currentIndex = $state(startIndex >= 0 ? startIndex : 0);
 
@@ -74,6 +77,12 @@
 
 	const currentItem = $derived(items[currentIndex] ?? null);
 	const currentOrdinal = $derived(items[currentIndex]?.ordinal ?? 0);
+
+	// Update the URL as the user navigates between photos (replaceState, no new history entry).
+	$effect(() => {
+		const item = currentItem;
+		if (item) onOrdinalChange?.(item.ordinal);
+	});
 	const hasPrev = $derived(currentOrdinal > 0 || currentIndex > 0);
 	const hasNext = $derived(
 		total > 0 ? currentOrdinal < total - 1 : currentIndex < items.length - 1
@@ -124,16 +133,18 @@
 	});
 
 	async function loadInitial() {
+		// Fetch starting near the requested ordinal so it lands in the first page.
+		const startOffset = startOrdinal != null ? Math.max(0, startOrdinal - 10) : 0;
 		const page = await listPhotos(collectionId, {
 			sortOrder: storeParams.sortOrder,
 			recursive: storeParams.recursive,
-			offset: 0,
+			offset: startOffset,
 			limit: 200
 		});
 		items = page.items;
 		// Find start item if provided
-		if (startItem != null) {
-			const idx = items.findIndex((i) => i.id === startItem);
+		if (startOrdinal != null) {
+			const idx = items.findIndex((i) => i.ordinal === startOrdinal);
 			if (idx >= 0) currentIndex = idx;
 		}
 		// Update store total from first page if unknown

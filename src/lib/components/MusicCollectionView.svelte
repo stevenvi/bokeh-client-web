@@ -62,11 +62,11 @@
 	});
 
 	function openArtist(artistId: number) {
-		goto(`/collection/${collectionId}/artist/${artistId}`);
+		goto(`/audio/${collectionId}/artist/${artistId}`);
 	}
 </script>
 
-<ScrollRestore path={`/collection/${collectionId}`} />
+<ScrollRestore path={`/audio/${collectionId}`} />
 
 <div class="">
 	<!-- Search bar -->

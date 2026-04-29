@@ -9,9 +9,10 @@
 	interface Props {
 		albumId: number;
 		rootCollectionId: number;
+		artistId: number;
 	}
 
-	let { albumId, rootCollectionId }: Props = $props();
+	let { albumId, rootCollectionId, artistId }: Props = $props();
 
 	const tracksQuery = $derived(
 		createQuery({
@@ -28,7 +29,7 @@
 			navigationStore.push({
 				id: albumId,
 				name: $tracksQuery.data.album.name,
-				path: `/music/album/${albumId}?collection=${rootCollectionId}`
+				path: `/audio/${rootCollectionId}/artist/${artistId}/album/${albumId}`
 			});
 		}
 	});
@@ -71,7 +72,7 @@
 
 </script>
 
-<ScrollRestore path={`/music/album/${albumId}?collection=${rootCollectionId}`} />
+<ScrollRestore path={`/audio/${rootCollectionId}/artist/${artistId}/album/${albumId}`} />
 
 <div class="">
 	{#if $tracksQuery.isPending}

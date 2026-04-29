@@ -35,13 +35,13 @@
 			navigationStore.push({
 				id: artistId,
 				name: $albumsQuery.data.artist.name,
-				path: `/collection/${rootCollectionId}/artist/${artistId}`
+				path: `/audio/${rootCollectionId}/artist/${artistId}`
 			});
 		}
 	});
 
 	function openAlbum(albumId: number) {
-		goto(`/music/album/${albumId}?collection=${rootCollectionId}`);
+		goto(`/audio/${rootCollectionId}/artist/${artistId}/album/${albumId}`);
 	}
 
 	function playAlbum(albumId: number) {
@@ -49,7 +49,7 @@
 	}
 </script>
 
-<ScrollRestore path={`/collection/${rootCollectionId}/artist/${artistId}`} />
+<ScrollRestore path={`/audio/${rootCollectionId}/artist/${artistId}`} />
 
 <div class="">
 	{#if $albumsQuery.isPending}

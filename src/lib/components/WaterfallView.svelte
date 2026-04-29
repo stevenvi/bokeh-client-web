@@ -12,9 +12,10 @@
 	interface Props {
 		collectionId: number;
 		collectionName: string;
+		basePath: string;
 	}
 
-	let { collectionId, collectionName }: Props = $props();
+	let { collectionId, collectionName, basePath }: Props = $props();
 
 	type PageParam = { offset: number; limit: number };
 	const PAGE_LIMIT = 200;
@@ -330,7 +331,7 @@
 			total: $statsQuery.data?.total ?? 0,
 			params: { sortOrder: 'desc', recursive: true }
 		});
-		goto(`/collection/${collectionId}/items/${item.id}/slideshow/waterfall?name=${encodeURIComponent(collectionName)}`);
+		goto(`${basePath}/slideshow/${item.ordinal}`);
 	}
 
 	// Whether the year scrollbar will be visible (mirrors its internal logic)

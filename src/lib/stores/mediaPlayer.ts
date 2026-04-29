@@ -20,6 +20,10 @@ export interface VideoPlayParams {
 	collectionType: string;
 	bookmarkSeconds: number | null;
 	thumbnailUrl: string | null;
+	/** Full path to the collection page, e.g. /video/123/456 */
+	collectionPath: string;
+	/** Full path to the watch page, e.g. /video/123/456/watch/789 */
+	watchPath: string;
 }
 
 export interface MediaPlayerState {
@@ -44,6 +48,8 @@ export interface MediaPlayerState {
 	thumbnailUrl: string | null;
 	collectionId: number | null;
 	collectionType: string | null;
+	collectionPath: string | null;
+	watchPath: string | null;
 	bookmarkSeconds: number | null;
 }
 
@@ -94,6 +100,8 @@ function createMediaPlayerStore() {
 		thumbnailUrl: null,
 		collectionId: null,
 		collectionType: null,
+		collectionPath: null,
+		watchPath: null,
 		bookmarkSeconds: null
 	});
 
@@ -463,6 +471,8 @@ function createMediaPlayerStore() {
 			thumbnailUrl: params.thumbnailUrl,
 			collectionId: params.collectionId,
 			collectionType: params.collectionType,
+			collectionPath: params.collectionPath,
+			watchPath: params.watchPath,
 			bookmarkSeconds: params.bookmarkSeconds,
 			isPlaying: false,
 			currentTime: 0,
@@ -686,7 +696,7 @@ function createMediaPlayerStore() {
 			});
 		} else if (state.type === 'video') {
 			stopVideo();
-			update((s) => ({ ...s, type: null as null, isPlaying: false, visible: false, itemId: null }));
+			update((s) => ({ ...s, type: null as null, isPlaying: false, visible: false, itemId: null, collectionPath: null, watchPath: null }));
 		}
 	}
 

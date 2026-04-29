@@ -15,9 +15,10 @@
 	interface Props {
 		collectionId: number;
 		collectionName: string;
+		basePath: string;
 	}
 
-	let { collectionId, collectionName }: Props = $props();
+	let { collectionId, collectionName, basePath }: Props = $props();
 
 	const childQuery = $derived(
 		createQuery({
@@ -27,7 +28,7 @@
 	);
 
 	function openChild(id: number) {
-		goto(`/collection/${id}`);
+		goto(`${basePath}/${id}`);
 	}
 
 	function handleItemClick(item: PhotoItem, _index: number) {
@@ -37,9 +38,7 @@
 			total: 0,
 			params: { sortOrder: 'asc', recursive: false }
 		});
-		goto(
-			`/collection/${collectionId}/items/${item.id}/slideshow/album?name=${encodeURIComponent(collectionName)}`
-		);
+		goto(`${basePath}/slideshow/${item.ordinal}`);
 	}
 </script>
 

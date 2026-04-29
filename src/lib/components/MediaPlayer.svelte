@@ -165,9 +165,9 @@
 		if (s.type !== 'video' || s.itemId == null) return;
 		if (s.collectionId != null) clearBookmark(s.collectionId, s.itemId).catch(() => {});
 		updateLocalBookmark(s.itemId, 0);
-		const destId = s.collectionId;
+		const dest = s.collectionPath;
 		mediaPlayer.close();
-		if (destId != null) goto(`/collection/${destId}`);
+		if (dest) goto(dest);
 	}
 
 	function saveVideoBookmark() {
@@ -325,7 +325,7 @@
 			<div class="pointer-events-auto flex items-center gap-2 bg-gradient-to-b from-black/60 to-transparent px-4 py-3">
 				<button
 					class="text-white hover:text-white/80 transition-colors"
-					onclick={() => { mediaPlayer.setIsFullPlayer(false); if (ps.collectionId != null) goto(`/collection/${ps.collectionId}`); else history.back(); }}
+					onclick={() => { mediaPlayer.setIsFullPlayer(false); if (ps.collectionPath) goto(ps.collectionPath); else history.back(); }}
 					aria-label="Back"
 				>
 					<svg class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
@@ -562,7 +562,7 @@
 				<!-- svelte-ignore a11y_no_static_element_interactions -->
 				<div
 					class="min-w-0 flex-1 cursor-pointer"
-					onclick={() => ps.collectionId != null && goto(`/collection/${ps.collectionId}/items/${ps.itemId}/watch`)}
+					onclick={() => ps.watchPath && goto(ps.watchPath)}
 				>
 					<p class="text-text-primary truncate text-sm font-medium">{ps.title}</p>
 					<p class="text-text-secondary truncate text-xs">{ps.subtitle}</p>

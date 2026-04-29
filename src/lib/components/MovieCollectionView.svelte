@@ -15,9 +15,10 @@
 
 	interface Props {
 		collection: CollectionView;
+		basePath: string;
 	}
 
-	let { collection }: Props = $props();
+	let { collection, basePath }: Props = $props();
 
 	// Server auto-adds include_descendants for video:movie type
 	const itemsQuery = $derived(
@@ -37,8 +38,9 @@
 	}
 
 	function onCardClick(item: VideoItemView) {
+		const wp = `${basePath}/watch/${item.id}`;
 		if ($mediaPlayer.type === 'video' && $mediaPlayer.itemId === item.id) {
-			goto(`/collection/${collection.id}/items/${item.id}/watch`);
+			goto(wp);
 			return;
 		}
 		mediaPlayer.playVideo({
@@ -48,13 +50,15 @@
 			collectionName: collection.name,
 			collectionType: collection.type,
 			bookmarkSeconds: item.bookmark_seconds ?? null,
-			thumbnailUrl: videoCoverUrl(item.id)
+			thumbnailUrl: videoCoverUrl(item.id),
+			collectionPath: basePath,
+			watchPath: wp
 		});
-		goto(`/collection/${collection.id}/items/${item.id}/watch`);
+		goto(wp);
 	}
 </script>
 
-<ScrollRestore path={`/collection/${collection.id}`} />
+<ScrollRestore path={basePath} />
 
 <div class="p-4">
 	{#if $itemsQuery.isPending}

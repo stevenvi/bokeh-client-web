@@ -48,7 +48,7 @@
 						name={collection.name}
 						type={collection.type}
 						date={collection.date}
-						onclick={() => goto(`/collection/${collection.id}`)}
+						onclick={() => goto(`/audio/${collection.id}`)}
 					/>
 					{#if $authStore?.isAdmin}
 						<div class="absolute top-1 right-1 z-10" onclick={(e) => e.stopPropagation()}>
