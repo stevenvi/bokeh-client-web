@@ -1,12 +1,13 @@
 <script lang="ts">
 	import { page } from '$app/state';
+	import { replaceState } from '$app/navigation';
 	import { parseCollectionIds, loadCollectionChain, applyBreadcrumbs } from '$lib/utils/collectionPath';
 	import SlideshowView from '$lib/components/SlideshowView.svelte';
 
 	const pathParam = $derived(page.params.path ?? '');
 
-	// Read ordinal once — not reactive. replaceState updates the URL as the user
-	// navigates but we don't want to re-mount the slideshow on every slide change.
+	// Read ordinal once — not reactive. The URL updates as the user navigates
+	// but routeKey excludes the ordinal so the page never remounts per slide.
 	const startOrdinal = Number(page.params.ordinal);
 
 	let loadState = $state<'loading' | 'error' | 'loaded'>('loading');
@@ -50,8 +51,7 @@
 	});
 
 	function handleOrdinalChange(ordinal: number) {
-		const newUrl = '/photo/' + pathParam + '/slideshow/' + ordinal;
-		history.replaceState({ ...history.state }, '', newUrl);
+		replaceState('/photo/' + pathParam + '/slideshow/' + ordinal, {});
 	}
 </script>
 

@@ -2,7 +2,7 @@
 	import '../app.css';
 	import { onMount } from 'svelte';
 	import { page } from '$app/state';
-	import { beforeNavigate, afterNavigate } from '$app/navigation';
+	import { beforeNavigate, afterNavigate, replaceState } from '$app/navigation';
 	import { QueryClient, QueryClientProvider } from '@tanstack/svelte-query';
 	import { appStore } from '$lib/stores/app';
 	import { authStore } from '$lib/stores/auth';
@@ -16,38 +16,40 @@
 	import LoginScreen from '$lib/components/LoginScreen.svelte';
 	import HamburgerMenu from '$lib/components/HamburgerMenu.svelte';
 	import MediaPlayer from '$lib/components/MediaPlayer.svelte';
-	import { navigationStore, type BreadcrumbEntry } from '$lib/stores/navigation';
+	import { navigationStore } from '$lib/stores/navigation';
 	import { goBack } from '$lib/utils/breadcrumb.svelte';
 
 	// Before leaving any page, persist the breadcrumb trail into the departing
-	// history entry. snapshotForHistory() may have pre-captured the state before
-	// an explicit mutation (goHome/goTo); fall back to the current state otherwise.
+	// history entry via SvelteKit's page state. snapshotForHistory() may have
+	// pre-captured the state before an explicit mutation; fall back to current.
 	//
 	// Skip for popstate: the browser moves the history pointer *before* this fires,
-	// so history.state already belongs to the destination entry. Writing here would
+	// so page.state already belongs to the destination entry. Writing here would
 	// corrupt the saved state we're about to restore in afterNavigate.
 	beforeNavigate((nav) => {
 		const crumbs = navigationStore.consumeHistorySnapshot();
-		if (nav.type === 'popstate' || typeof history === 'undefined') return;
-		history.replaceState({ ...history.state, breadcrumbs: crumbs }, '');
+		if (nav.type === 'popstate') return;
+		replaceState(page.url, { breadcrumbs: crumbs });
 	});
 
-	// On browser back/forward, restore the breadcrumb trail that was saved when
-	// we last left this history entry. The page's own $effect will run first but
+	// On browser back/forward, restore the breadcrumb trail saved when we last
+	// left this history entry. The page's own $effect will run first but
 	// afterNavigate fires after, so the restore always wins.
 	afterNavigate((nav) => {
-		if (nav.type === 'popstate' && typeof history !== 'undefined') {
-			const saved = history.state?.breadcrumbs as BreadcrumbEntry[] | undefined;
-			if (saved) {
-				navigationStore.restore(saved);
-			}
+		if (nav.type === 'popstate') {
+			const saved = page.state.breadcrumbs;
+			if (saved) navigationStore.restore(saved);
 		}
 	});
 
 	let { children } = $props();
 
-	// Key for page fade transitions — changes on route navigation.
-	const routeKey = $derived(page.url.pathname);
+	// Key for page fade transitions. Keyed on route + stable path params so that
+	// in-page URL updates (e.g. slideshow ordinal changes) don't remount the page.
+	// itemId is included so navigating between different videos still remounts.
+	const routeKey = $derived(
+		(page.route.id ?? '') + '|' + (page.params.path ?? '') + '|' + (page.params.itemId ?? '')
+	);
 
 	const queryClient = new QueryClient({
 		defaultOptions: {
