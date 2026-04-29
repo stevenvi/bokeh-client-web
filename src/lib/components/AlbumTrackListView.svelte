@@ -5,6 +5,7 @@
 	import { navigationStore } from '$lib/stores/navigation';
 	import { mediaPlayer } from '$lib/stores/mediaPlayer';
 	import type { TrackView } from '$lib/types';
+	import ScrollRestore from './ScrollRestore.svelte';
 
 	interface Props {
 		albumId: number;
@@ -77,6 +78,8 @@
 </script>
 
 <svelte:window onkeydown={onKeyDown} />
+
+<ScrollRestore path={`/music/album/${albumId}?collection=${rootCollectionId}`} />
 
 <div class="">
 	{#if $tracksQuery.isPending}

@@ -1,10 +1,11 @@
 <script lang="ts">
 	import { createQuery, createInfiniteQuery } from '@tanstack/svelte-query';
-	import { goto, afterNavigate } from '$app/navigation';
+	import { goto } from '$app/navigation';
 	import { listArtists } from '$lib/api/music';
 	import { navigationStore } from '$lib/stores/navigation';
 	import ArtistTile from './ArtistTile.svelte';
 	import AdminTileMenu from './AdminTileMenu.svelte';
+	import ScrollRestore from './ScrollRestore.svelte';
 	import { authStore } from '$lib/stores/auth';
 	import { adminUploadArtistImage, adminDeleteArtistImage } from '$lib/api/admin';
 	import { artistImageBust, bumpArtistImageBust } from '$lib/stores/coverBust';
@@ -63,15 +64,7 @@
 		return () => observer.disconnect();
 	});
 
-	afterNavigate(() => {
-		const saved = navigationStore.getScrollPosition(collectionId);
-		if (saved > 0) {
-			window.scrollTo({ top: saved, behavior: 'instant' });
-		}
-	});
-
 	function openArtist(artistId: number, artistName: string) {
-		navigationStore.saveScrollPosition(collectionId, window.scrollY);
 		navigationStore.push({ id: artistId, name: artistName, path: `/collection/${collectionId}/artist/${artistId}` });
 		goto(`/collection/${collectionId}/artist/${artistId}`);
 	}
@@ -88,6 +81,8 @@
 </script>
 
 <svelte:window onkeydown={onKeyDown} />
+
+<ScrollRestore path={`/collection/${collectionId}`} />
 
 <div class="">
 	<!-- Search bar -->

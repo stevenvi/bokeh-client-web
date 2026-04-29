@@ -7,6 +7,7 @@
 	import { mediaPlayer } from '$lib/stores/mediaPlayer';
 	import AlbumTile from './AlbumTile.svelte';
 	import AdminTileMenu from './AdminTileMenu.svelte';
+	import ScrollRestore from './ScrollRestore.svelte';
 	import { authStore } from '$lib/stores/auth';
 	import { adminUploadArtistImage, adminDeleteArtistImage, adminUploadAlbumCover, adminDeleteAlbumCover } from '$lib/api/admin';
 	import { artistImageBust, bumpArtistImageBust, albumCoverBust, bumpAlbumCoverBust } from '$lib/stores/coverBust';
@@ -56,6 +57,8 @@
 </script>
 
 <svelte:window onkeydown={onKeyDown} />
+
+<ScrollRestore path={`/collection/${rootCollectionId}/artist/${artistId}`} />
 
 <div class="">
 	{#if $albumsQuery.isPending}

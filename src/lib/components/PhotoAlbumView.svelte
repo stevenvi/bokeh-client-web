@@ -5,6 +5,7 @@
 	import { onDestroy } from 'svelte';
 	import AlbumGridView from './AlbumGridView.svelte';
 	import WaterfallView from './WaterfallView.svelte';
+	import ScrollRestore from './ScrollRestore.svelte';
 
 	interface Props {
 		collectionId: number;
@@ -31,36 +32,9 @@
 		return () => { toolbarStore.set(null); };
 	});
 
-	// Save/restore scroll position and view mode.
-	// The actual scrollable element is the layout's overflow container,
-	// not the window — see +layout.svelte's #app-scroll.
+	// Persist the chosen view mode across navigations.
 	onDestroy(() => {
-		const container = document.getElementById('app-scroll');
-		navigationStore.saveScrollPosition(collectionId, container?.scrollTop ?? 0);
 		navigationStore.saveViewMode(collectionId, mode);
-	});
-
-	$effect(() => {
-		const saved = navigationStore.getScrollPosition(collectionId);
-		if (saved == null || saved <= 0) return;
-		// The grid/waterfall data loads asynchronously, so on first paint the
-		// scroll container may be too short to honor the saved offset. Poll a
-		// few frames until content height catches up (or give up after ~1s).
-		let attempts = 0;
-		let cancelled = false;
-		function tryRestore() {
-			if (cancelled) return;
-			const container = document.getElementById('app-scroll');
-			if (!container) return;
-			const target = Math.min(saved, container.scrollHeight - container.clientHeight);
-			if (target >= saved || attempts++ > 60) {
-				container.scrollTo(0, saved);
-				return;
-			}
-			requestAnimationFrame(tryRestore);
-		}
-		requestAnimationFrame(tryRestore);
-		return () => { cancelled = true; };
 	});
 
 	function onKeyDown(e: KeyboardEvent) {
@@ -79,6 +53,8 @@
 </script>
 
 <svelte:window onkeydown={onKeyDown} />
+
+<ScrollRestore path={`/collection/${collectionId}`} />
 
 <div>
 	{#key collectionId}

@@ -7,6 +7,7 @@
 	import { mediaPlayer } from '$lib/stores/mediaPlayer';
 	import type { CollectionView, VideoItemView } from '$lib/types';
 	import AdminTileMenu from './AdminTileMenu.svelte';
+	import ScrollRestore from './ScrollRestore.svelte';
 	import { authStore } from '$lib/stores/auth';
 	import { adminCreateJob, adminUploadVideoCover } from '$lib/api/admin';
 	import { videoCoverBust, bumpVideoCoverBust } from '$lib/stores/coverBust';
@@ -52,6 +53,8 @@
 		goto(`/collection/${collection.id}/items/${item.id}/watch`);
 	}
 </script>
+
+<ScrollRestore path={`/collection/${collection.id}`} />
 
 <div class="p-4">
 	{#if $itemsQuery.isPending}

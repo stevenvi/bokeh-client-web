@@ -1,6 +1,5 @@
 <script lang="ts">
 	import { page } from '$app/state';
-	import { navigationStore } from '$lib/stores/navigation';
 	import ArtistView from '$lib/components/ArtistView.svelte';
 
 	const rootCollectionId = $derived(Number(page.params.id));

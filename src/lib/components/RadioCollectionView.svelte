@@ -5,6 +5,7 @@
 	import { navigationStore } from '$lib/stores/navigation';
 	import ShowTile from './ShowTile.svelte';
 	import AdminTileMenu from './AdminTileMenu.svelte';
+	import ScrollRestore from './ScrollRestore.svelte';
 	import { authStore } from '$lib/stores/auth';
 	import { adminUploadArtistImage, adminDeleteArtistImage } from '$lib/api/admin';
 	import { artistImageBust, bumpArtistImageBust } from '$lib/stores/coverBust';
@@ -44,6 +45,8 @@
 </script>
 
 <svelte:window onkeydown={onKeyDown} />
+
+<ScrollRestore path={`/collection/${collectionId}`} />
 
 <div class="">
 	<div class="px-4 py-4">

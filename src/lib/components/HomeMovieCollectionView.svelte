@@ -9,6 +9,7 @@
 	import { navigationStore } from '$lib/stores/navigation';
 	import type { CollectionView, VideoItemView } from '$lib/types';
 	import AdminTileMenu from './AdminTileMenu.svelte';
+	import ScrollRestore from './ScrollRestore.svelte';
 	import { authStore } from '$lib/stores/auth';
 	import { adminCreateJob, adminUploadCollectionCover, adminUploadVideoCover } from '$lib/api/admin';
 	import { coverBustStore, bumpCoverBust, videoCoverBust, bumpVideoCoverBust } from '$lib/stores/coverBust';
@@ -67,6 +68,8 @@
 		goto(`/collection/${collectionId}`);
 	}
 </script>
+
+<ScrollRestore path={`/collection/${collection.id}`} />
 
 <div class="p-4">
 	{#if $childCollectionsQuery.isPending || $itemsQuery.isPending}

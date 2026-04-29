@@ -6,6 +6,7 @@
 	import { navigationStore } from '$lib/stores/navigation';
 	import { mediaPlayer } from '$lib/stores/mediaPlayer';
 	import AdminTileMenu from './AdminTileMenu.svelte';
+	import ScrollRestore from './ScrollRestore.svelte';
 	import { authStore } from '$lib/stores/auth';
 	import { adminUploadArtistImage, adminDeleteArtistImage } from '$lib/api/admin';
 	import { artistImageBust, bumpArtistImageBust } from '$lib/stores/coverBust';
@@ -119,11 +120,15 @@
 		return Math.min(100, (target.positionSeconds / ep.duration_seconds) * 100);
 	});
 
-	// Scroll highlighted episode into view after load
+	// Scroll highlighted episode into view after load — only on a fresh entry
+	// to the page. If we have a saved scroll position from the breadcrumb
+	// stack, ScrollRestore handles placement and we should not override it.
+	const showPath = $derived(`/radio/show/${showId}?collection=${collectionId}`);
 	let scrolled = $state(false);
 	$effect(() => {
 		if (!$episodesQuery.data || scrolled || highlightedEpisodeId == null) return;
 		scrolled = true;
+		if (navigationStore.getScrollForPath(showPath) > 0) return;
 		setTimeout(() => {
 			document.getElementById(`episode-${highlightedEpisodeId}`)?.scrollIntoView({
 				behavior: 'smooth',
@@ -194,6 +199,8 @@
 </script>
 
 <svelte:window onkeydown={onKeyDown} />
+
+<ScrollRestore path={showPath} />
 
 <div class="">
 	{#if $episodesQuery.isPending}
