@@ -45,37 +45,33 @@
 	}
 
 	// Subscribe to get current value synchronously in derived
-	let currentCrumbs: { id: number; name: string; path: string }[] = $state([]);
+	let currentCrumbs: { id: number; name: string; path: string, type?: string }[] = $state([]);
 	navigationStore.subscribe((v) => { currentCrumbs = v; });
 
 	// Breadcrumb display: Home + entries, with middle collapse
 	// Always show Home, always show leaf (last entry) with full name.
 	// If >2 middle entries, collapse them to "..."
 	const breadcrumbSegments = $derived(() => {
-		const crumbs = currentCrumbs;
+		let crumbs = currentCrumbs;
 		if (crumbs.length === 0) {
 			// Static page (admin, profile, etc.) — show its title as the leaf
 			return staticPageTitle
 				? [{ type: 'entry' as const, path: page.url.pathname, name: staticPageTitle, isLeaf: true }]
 				: [];
 		}
-		if (crumbs.length <= 3) {
-			// Show all: each entry gets its own segment
-			return crumbs.map((c, i) => ({
-				type: 'entry' as const,
-				path: c.path,
-				name: c.name,
-				isLeaf: i === crumbs.length - 1
-			}));
+
+		if (crumbs.length > 5) {
+			// Collapse middle: Home > first > second > ... > n-1 > leaf
+			crumbs = [crumbs[0], crumbs[1], {id: -1, type: 'ellipsis', path: '', name: '...'}, crumbs[crumbs.length - 2], crumbs[crumbs.length - 1]];
 		}
-		// Collapse middle: Home > first > ... > leaf
-		const first = crumbs[0];
-		const leaf = crumbs[crumbs.length - 1];
-		return [
-			{ type: 'entry' as const, path: first.path, name: first.name, isLeaf: false },
-			{ type: 'ellipsis' as const, path: '', name: '...', isLeaf: false },
-			{ type: 'entry' as const, path: leaf.path, name: leaf.name, isLeaf: true }
-		];
+
+		// Show all: each entry gets its own segment
+		return crumbs.map((c, i) => ({
+			type: c.type ?? 'entry' as const,
+			path: c.path,
+			name: c.name,
+			isLeaf: i === crumbs.length - 1
+		}));
 	});
 
 	const leafName = $derived(
