@@ -6,6 +6,7 @@
 	import { setBookmark, clearBookmark } from '$lib/api/video';
 	import type { VideoItemView } from '$lib/types';
 	import type { ItemsPage } from '$lib/api/collections';
+	import BackButton from './BackButton.svelte';
 
 	const queryClient = useQueryClient();
 
@@ -322,20 +323,8 @@
 	>
 		<!-- Top breadcrumb (hidden in browser fullscreen) -->
 		{#if !isBrowserFullscreen}
-			<div class="pointer-events-auto flex items-center gap-2 bg-gradient-to-b from-black/60 to-transparent px-4 py-3">
-				<button
-					class="text-white hover:text-white/80 transition-colors"
-					onclick={() => { mediaPlayer.setIsFullPlayer(false); if (ps.collectionPath) goto(ps.collectionPath); else history.back(); }}
-					aria-label="Back"
-				>
-					<svg class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
-						<path stroke-linecap="round" stroke-linejoin="round" d="M15 19l-7-7 7-7" />
-					</svg>
-				</button>
-				<div>
-					<p class="text-white text-sm font-medium leading-tight">{ps.title}</p>
-					<p class="text-black text-xs">{ps.subtitle}</p>
-				</div>
+			<div class="pointer-events-auto flex items-center bg-gradient-to-b from-black/60 to-transparent px-4 py-3">
+				<BackButton onclick={() => { mediaPlayer.setIsFullPlayer(false); if (ps.collectionPath) goto(ps.collectionPath); else history.back(); }} />
 			</div>
 		{/if}
 

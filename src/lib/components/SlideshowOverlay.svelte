@@ -1,5 +1,6 @@
 <script lang="ts">
 	import type { PhotoItem } from '$lib/types';
+	import BackButton from './BackButton.svelte';
 
 	interface Props {
 		item: PhotoItem;
@@ -59,15 +60,7 @@
 <div class="pointer-events-none absolute inset-0 z-10 hidden md:flex flex-col justify-between">
 	<!-- Top bar -->
 	<div class="pointer-events-auto flex items-center bg-gradient-to-b from-black/60 to-transparent px-4 py-3">
-		<button
-			class="text-white/80 hover:text-white mr-4 flex items-center gap-2 text-sm"
-			onclick={(e) => { e.stopPropagation(); onBack(); }}
-		>
-			<svg class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-				<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10.5 19.5L3 12m0 0l7.5-7.5M3 12h18" />
-			</svg>
-			Back
-		</button>
+		<span class="mr-4"><BackButton onclick={(e) => { e.stopPropagation(); onBack(); }} /></span>
 		<span class="flex-1 select-none text-center text-sm font-medium text-white/90">{collectionName}</span>
 		<span class="text-white/80 text-sm font-medium">{item.ordinal + 1} / {total}</span>
 	</div>
@@ -119,15 +112,7 @@
 <div class="pointer-events-none absolute inset-0 z-10 flex flex-col justify-between md:hidden">
 	<!-- Top bar -->
 	<div class="pointer-events-auto flex items-center bg-gradient-to-b from-black/60 to-transparent px-4 py-3">
-		<button
-			class="text-white/80 hover:text-white mr-4 flex items-center gap-2 text-sm"
-			onclick={(e) => { e.stopPropagation(); onBack(); }}
-			aria-label="Back"
-		>
-			<svg class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-				<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10.5 19.5L3 12m0 0l7.5-7.5M3 12h18" />
-			</svg>
-		</button>
+		<span class="mr-4"><BackButton onclick={(e) => { e.stopPropagation(); onBack(); }} /></span>
 		<span class="flex-1 select-none truncate text-center text-sm font-medium text-white/90">{collectionName}</span>
 		<span class="text-white/80 text-sm font-medium">{item.ordinal + 1} / {total}</span>
 	</div>
