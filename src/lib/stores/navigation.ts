@@ -25,6 +25,12 @@ function createNavigationStore() {
 	/** LIFO stack of Escape consumers. The topmost handler that returns true wins. */
 	const escapeStack: EscapeHandler[] = [];
 
+	/**
+	 * Holds a pre-mutation snapshot to be written to history.state on the next navigation.
+	 * Set by snapshotForHistory() when a handler mutates breadcrumbs before calling goto().
+	 */
+	let pendingHistorySnapshot: BreadcrumbEntry[] | null = null;
+
 	/** Reads the current entries snapshot without subscribing. */
 	function snapshot(): BreadcrumbEntry[] {
 		let crumbs: BreadcrumbEntry[] = [];
@@ -35,6 +41,33 @@ function createNavigationStore() {
 
 	return {
 		subscribe,
+
+		/**
+		 * Capture the current breadcrumb state before a mutation+navigation sequence.
+		 * Call this before reset()/popTo() when the goto() that follows should record
+		 * the pre-mutation trail in the departing history entry.
+		 */
+		snapshotForHistory() {
+			pendingHistorySnapshot = snapshot();
+		},
+
+		/**
+		 * Consume the pending snapshot (or fall back to current state).
+		 * Called by beforeNavigate to decide what to write to history.state.
+		 */
+		consumeHistorySnapshot(): BreadcrumbEntry[] {
+			const s = pendingHistorySnapshot ?? snapshot();
+			pendingHistorySnapshot = null;
+			return s;
+		},
+
+		/**
+		 * Overwrite the entire breadcrumb trail with previously-saved entries.
+		 * Used by afterNavigate to restore state on browser back/forward.
+		 */
+		restore(entries: BreadcrumbEntry[]) {
+			set(entries);
+		},
 
 		/** Returns the path one level up in the breadcrumb trail, or '/' if at the top. */
 		previousPath(): string {

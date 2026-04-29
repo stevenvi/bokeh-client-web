@@ -3,13 +3,15 @@
 	import { navigationStore } from '$lib/stores/navigation';
 
 	function goHome() {
+		navigationStore.snapshotForHistory();
 		navigationStore.reset();
 		goto('/');
 	}
 
-	function goTo(id: number) {
-		navigationStore.popTo(`/collection/${id}`);
-		goto(`/collection/${id}`);
+	function goTo(path: string) {
+		navigationStore.snapshotForHistory();
+		navigationStore.popTo(path);
+		goto(path);
 	}
 </script>
 
@@ -30,7 +32,7 @@
 		</svg>
 		<button
 			class="text-text-secondary hover:text-text-primary max-w-48 truncate text-sm transition-colors"
-			onclick={() => goTo(entry.id)}
+			onclick={() => goTo(entry.path)}
 		>
 			{entry.name}
 		</button>

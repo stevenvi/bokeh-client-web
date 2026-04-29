@@ -15,16 +15,21 @@
 
 	function navigate(path: string) {
 		close();
-		if (path === '/') navigationStore.reset();
+		if (path === '/') {
+			navigationStore.snapshotForHistory();
+			navigationStore.reset();
+		}
 		goto(path);
 	}
 
 	function goHome() {
+		navigationStore.snapshotForHistory();
 		navigationStore.reset();
 		goto('/');
 	}
 
 	function goTo(path: string) {
+		navigationStore.snapshotForHistory();
 		navigationStore.popTo(path);
 		goto(path);
 	}
