@@ -1,6 +1,5 @@
 <script lang="ts">
 	import { createQuery } from '@tanstack/svelte-query';
-	import { goto } from '$app/navigation';
 	import { listShowEpisodes, upsertShowBookmark } from '$lib/api/radio';
 	import { artistImageUrl } from '$lib/api/music';
 	import { navigationStore } from '$lib/stores/navigation';
@@ -193,12 +192,7 @@
 		!$episodesQuery.data?.bookmark ? 'Play from Beginning' : 'Resume'
 	);
 
-	function onKeyDown(e: KeyboardEvent) {
-		if (e.key === 'Escape') goto(`/collection/${collectionId}`);
-	}
 </script>
-
-<svelte:window onkeydown={onKeyDown} />
 
 <ScrollRestore path={showPath} />
 

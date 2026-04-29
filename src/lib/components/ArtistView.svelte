@@ -40,23 +40,14 @@
 		}
 	});
 
-	function openAlbum(albumId: number, albumName: string) {
-		navigationStore.push({ id: albumId, name: albumName, path: `/music/album/${albumId}?collection=${rootCollectionId}` });
+	function openAlbum(albumId: number) {
 		goto(`/music/album/${albumId}?collection=${rootCollectionId}`);
 	}
 
 	function playAlbum(albumId: number) {
 		mediaPlayer.playAlbum(rootCollectionId, albumId);
 	}
-
-	function onKeyDown(e: KeyboardEvent) {
-		if (e.key === 'Escape') {
-			goto(`/collection/${rootCollectionId}`);
-		}
-	}
 </script>
-
-<svelte:window onkeydown={onKeyDown} />
 
 <ScrollRestore path={`/collection/${rootCollectionId}/artist/${artistId}`} />
 
@@ -123,7 +114,7 @@
 								name={album.name}
 								year={album.year}
 								bust={$albumCoverBust[album.album_id]}
-								onClickTitle={() => openAlbum(album.album_id, album.name)}
+								onClickTitle={() => openAlbum(album.album_id)}
 								onClickImage={() => playAlbum(album.album_id)}
 							/>
 							{#if $authStore?.isAdmin}

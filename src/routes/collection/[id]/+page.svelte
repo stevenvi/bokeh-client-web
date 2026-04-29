@@ -1,6 +1,5 @@
 <script lang="ts">
 	import { page } from '$app/state';
-	import { goto } from '$app/navigation';
 	import { createQuery } from '@tanstack/svelte-query';
 	import { getCollection } from '$lib/api/collections';
 	import { navigationStore } from '$lib/stores/navigation';
@@ -40,23 +39,7 @@
 			navigationStore.push({ id: collection.id, name: collection.name, path: `/collection/${collection.id}` });
 		}
 	});
-
-	function onKeyDown(e: KeyboardEvent) {
-		if (e.key !== 'Escape') return;
-		// Photo, music, and show collections handle escape in their own views
-		if ($collectionQuery.data?.type === 'image:photo') return;
-		if ($collectionQuery.data?.type === 'audio:music') return;
-		if ($collectionQuery.data?.type === 'audio:show') return;
-		const parentId = $collectionQuery.data?.parent_collection_id;
-		if (parentId != null) {
-			goto(`/collection/${parentId}`);
-		} else {
-			goto(navigationStore.previousPath());
-		}
-	}
 </script>
-
-<svelte:window onkeydown={onKeyDown} />
 
 <svelte:head>
 	<title>{$collectionQuery.data?.name ?? 'Collection'} — Bokeh</title>
@@ -72,11 +55,11 @@
 	{:else if $collectionQuery.data}
 		{@const collection = $collectionQuery.data}
 		{#if collection.type === 'image:photo'}
-			<PhotoAlbumView collectionId={collectionId} collectionName={collection.name} parentCollectionId={collection.parent_collection_id} />
+			<PhotoAlbumView collectionId={collectionId} collectionName={collection.name} />
 		{:else if collection.type === 'audio:music' && collection.parent_collection_id == null}
-			<MusicCollectionView collectionId={collectionId} collectionName={collection.name} parentCollectionId={collection.parent_collection_id} />
+			<MusicCollectionView collectionId={collectionId} />
 		{:else if collection.type === 'audio:show' && collection.parent_collection_id == null}
-			<RadioCollectionView collectionId={collectionId} collectionName={collection.name} parentCollectionId={collection.parent_collection_id} />
+			<RadioCollectionView collectionId={collectionId} />
 		{:else if collection.type === 'video:movie'}
 			<MovieCollectionView {collection} />
 		{:else if collection.type === 'video:home_movie'}

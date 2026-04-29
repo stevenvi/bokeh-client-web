@@ -4,6 +4,9 @@
 	import { authStore } from '$lib/stores/auth';
 	import ConfirmPopup from '$lib/components/ConfirmPopup.svelte';
 	import Toast from '$lib/components/Toast.svelte';
+	import { useRootBreadcrumb } from '$lib/utils/breadcrumb.svelte';
+
+	useRootBreadcrumb(() => ({ id: -101, name: 'Profile', path: '/profile' }));
 
 	const queryClient = useQueryClient();
 

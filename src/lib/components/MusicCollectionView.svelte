@@ -2,7 +2,6 @@
 	import { createQuery, createInfiniteQuery } from '@tanstack/svelte-query';
 	import { goto } from '$app/navigation';
 	import { listArtists } from '$lib/api/music';
-	import { navigationStore } from '$lib/stores/navigation';
 	import ArtistTile from './ArtistTile.svelte';
 	import AdminTileMenu from './AdminTileMenu.svelte';
 	import ScrollRestore from './ScrollRestore.svelte';
@@ -13,11 +12,9 @@
 
 	interface Props {
 		collectionId: number;
-		collectionName: string;
-		parentCollectionId: number | null;
 	}
 
-	let { collectionId, collectionName, parentCollectionId }: Props = $props();
+	let { collectionId }: Props = $props();
 	let searchTerm = $state('');
 	let debouncedSearch = $state('');
 	let debounceTimer: ReturnType<typeof setTimeout>;
@@ -64,23 +61,10 @@
 		return () => observer.disconnect();
 	});
 
-	function openArtist(artistId: number, artistName: string) {
-		navigationStore.push({ id: artistId, name: artistName, path: `/collection/${collectionId}/artist/${artistId}` });
+	function openArtist(artistId: number) {
 		goto(`/collection/${collectionId}/artist/${artistId}`);
 	}
-
-	function onKeyDown(e: KeyboardEvent) {
-		if (e.key === 'Escape') {
-			if (parentCollectionId != null) {
-				goto(`/collection/${parentCollectionId}`);
-			} else {
-				goto(navigationStore.previousPath());
-			}
-		}
-	}
 </script>
-
-<svelte:window onkeydown={onKeyDown} />
 
 <ScrollRestore path={`/collection/${collectionId}`} />
 
@@ -114,7 +98,7 @@
 							id={artist.id}
 							name={artist.name}
 							bust={$artistImageBust[artist.id]}
-							onclick={() => openArtist(artist.id, artist.name)}
+							onclick={() => openArtist(artist.id)}
 						/>
 						{#if $authStore?.isAdmin}
 							<div class="absolute top-1 right-1 z-10" onclick={(e) => e.stopPropagation()}>

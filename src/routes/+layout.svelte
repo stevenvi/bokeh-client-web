@@ -15,6 +15,8 @@
 	import LoginScreen from '$lib/components/LoginScreen.svelte';
 	import HamburgerMenu from '$lib/components/HamburgerMenu.svelte';
 	import MediaPlayer from '$lib/components/MediaPlayer.svelte';
+	import { navigationStore } from '$lib/stores/navigation';
+	import { goBack } from '$lib/utils/breadcrumb.svelte';
 
 	let { children } = $props();
 
@@ -33,9 +35,15 @@
 	onMount(() => {
 		function handleKeyDown(e: KeyboardEvent) {
 			const isReload = e.key === 'F5' || ((e.ctrlKey || e.metaKey) && e.key === 'r');
-			if (!isReload) return;
-			e.preventDefault();
-			queryClient.invalidateQueries();
+			if (isReload) {
+				e.preventDefault();
+				queryClient.invalidateQueries();
+				return;
+			}
+			if (e.key === 'Escape') {
+				if (navigationStore.runEscapeHandlers()) return;
+				goBack();
+			}
 		}
 		document.addEventListener('keydown', handleKeyDown);
 

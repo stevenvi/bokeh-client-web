@@ -1,14 +1,21 @@
 <script lang="ts">
 	import { page } from '$app/state';
 	import { onDestroy, onMount, untrack } from 'svelte';
-	import { goto } from '$app/navigation';
 	import { createQuery } from '@tanstack/svelte-query';
 	import { getCollection } from '$lib/api/collections';
 	import { videoCoverUrl } from '$lib/api/video';
 	import { mediaPlayer } from '$lib/stores/mediaPlayer';
+	import { useBreadcrumb, goBack } from '$lib/utils/breadcrumb.svelte';
 
 	const collectionId = $derived(Number(page.params.id));
 	const itemId = $derived(Number(page.params.itemId));
+
+	useBreadcrumb(() => ({
+		id: itemId,
+		name: 'Watch',
+		path: page.url.pathname,
+		hidden: true
+	}));
 
 	const collectionQuery = $derived(
 		createQuery({
@@ -42,17 +49,8 @@
 		});
 	});
 
-	function goToCollection() {
-		const id = $mediaPlayer.collectionId ?? collectionId;
-		if (id != null) goto(`/collection/${id}`);
-	}
-
-	function onKeyDown(e: KeyboardEvent) {
-		if (e.key === 'Escape') goToCollection();
-	}
-
 	function onFullscreenChange() {
-		if (!document.fullscreenElement) goToCollection();
+		if (!document.fullscreenElement) goBack();
 	}
 
 	onMount(() => {
@@ -64,7 +62,5 @@
 		mediaPlayer.setIsFullPlayer(false);
 	});
 </script>
-
-<svelte:window onkeydown={onKeyDown} />
 <svelte:head><title>{$mediaPlayer.title || 'Watch'} — Bokeh</title></svelte:head>
 <div class="h-dvh bg-black"></div>

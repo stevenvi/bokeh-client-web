@@ -1,12 +1,11 @@
 <script lang="ts">
 	import { createQuery } from '@tanstack/svelte-query';
 	import { goto } from '$app/navigation';
-	import { onMount } from 'svelte';
 	import { listCollections } from '$lib/api/collections';
-	import { navigationStore } from '$lib/stores/navigation';
 	import CollectionTile from '$lib/components/CollectionTile.svelte';
 	import AdminCollectionMenu from '$lib/components/AdminCollectionMenu.svelte';
 	import { authStore } from '$lib/stores/auth';
+	import { useBreadcrumb } from '$lib/utils/breadcrumb.svelte';
 
 	const collectionsQuery = createQuery({
 		queryKey: ['collections'],
@@ -17,16 +16,8 @@
 		$collectionsQuery.data?.filter((c) => c.type.startsWith('audio:')) ?? []
 	);
 
-	onMount(() => {
-		navigationStore.push({ id: -2, name: 'Audio', path: '/audio' });
-	});
-
-	function onKeyDown(e: KeyboardEvent) {
-		if (e.key === 'Escape') goto(navigationStore.previousPath());
-	}
+	useBreadcrumb(() => ({ id: -2, name: 'Audio', path: '/audio' }));
 </script>
-
-<svelte:window onkeydown={onKeyDown} />
 
 <svelte:head>
 	<title>Audio – Bokeh</title>

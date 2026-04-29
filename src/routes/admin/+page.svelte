@@ -21,8 +21,11 @@
 	import ConfirmPopup from '$lib/components/ConfirmPopup.svelte';
 	import PathBrowser from '$lib/components/PathBrowser.svelte';
 	import AdminCollectionMenu from '$lib/components/AdminCollectionMenu.svelte';
+	import { useRootBreadcrumb } from '$lib/utils/breadcrumb.svelte';
 
 	const queryClient = useQueryClient();
+
+	useRootBreadcrumb(() => ({ id: -100, name: 'Admin Dashboard', path: '/admin' }));
 
 	// Redirect non-admins
 	onMount(() => {
@@ -30,12 +33,6 @@
 			goto('/');
 		}
 	});
-
-	function onKeyDown(e: KeyboardEvent) {
-		if (e.key === 'Escape') {
-			history.back();
-		}
-	}
 
 	// ── Queries ────────────────────────────────────────────────────────────────
 	let coverLoadedStates = $state<Record<number, boolean>>({});
@@ -269,8 +266,6 @@
 		}
 	}
 </script>
-
-<svelte:window onkeydown={onKeyDown} />
 
 <svelte:head>
 	<title>Admin Dashboard — Bokeh</title>

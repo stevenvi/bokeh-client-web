@@ -6,7 +6,6 @@
 	import { videoCoverUrl } from '$lib/api/video';
 	import { collectionCoverUrl } from '$lib/api/media';
 	import { mediaPlayer } from '$lib/stores/mediaPlayer';
-	import { navigationStore } from '$lib/stores/navigation';
 	import type { CollectionView, VideoItemView } from '$lib/types';
 	import AdminTileMenu from './AdminTileMenu.svelte';
 	import ScrollRestore from './ScrollRestore.svelte';
@@ -63,8 +62,7 @@
 		goto(`/collection/${collection.id}/items/${item.id}/watch`);
 	}
 
-	function onCollectionClick(collectionId: number, collectionName: string) {
-		navigationStore.push({ id: collectionId, name: collectionName, path: `/collection/${collectionId}` });
+	function onCollectionClick(collectionId: number) {
 		goto(`/collection/${collectionId}`);
 	}
 </script>
@@ -88,7 +86,7 @@
 						<div class="relative">
 							<button
 								class="group flex w-full flex-col text-left"
-								onclick={() => onCollectionClick(col.id, col.name)}
+								onclick={() => onCollectionClick(col.id)}
 							>
 								<div class="relative w-full overflow-hidden rounded-lg bg-surface-raised" style="aspect-ratio: 4/3">
 									<div class="absolute inset-0 flex items-center justify-center pointer-events-none">

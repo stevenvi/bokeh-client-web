@@ -2,7 +2,6 @@
 	import { createQuery } from '@tanstack/svelte-query';
 	import { goto } from '$app/navigation';
 	import { listShows } from '$lib/api/radio';
-	import { navigationStore } from '$lib/stores/navigation';
 	import ShowTile from './ShowTile.svelte';
 	import AdminTileMenu from './AdminTileMenu.svelte';
 	import ScrollRestore from './ScrollRestore.svelte';
@@ -13,11 +12,9 @@
 
 	interface Props {
 		collectionId: number;
-		collectionName: string;
-		parentCollectionId: number | null;
 	}
 
-	let { collectionId, collectionName, parentCollectionId }: Props = $props();
+	let { collectionId }: Props = $props();
 
 	const showsQuery = $derived(
 		createQuery({
@@ -28,23 +25,10 @@
 
 	const allShows = $derived($showsQuery.data?.shows ?? []);
 
-	function openShow(showId: number, showName: string) {
-		navigationStore.push({ id: showId, name: showName, path: `/radio/show/${showId}?collection=${collectionId}` });
+	function openShow(showId: number) {
 		goto(`/radio/show/${showId}?collection=${collectionId}`);
 	}
-
-	function onKeyDown(e: KeyboardEvent) {
-		if (e.key === 'Escape') {
-			if (parentCollectionId != null) {
-				goto(`/collection/${parentCollectionId}`);
-			} else {
-				goto(navigationStore.previousPath());
-			}
-		}
-	}
 </script>
-
-<svelte:window onkeydown={onKeyDown} />
 
 <ScrollRestore path={`/collection/${collectionId}`} />
 
@@ -66,7 +50,7 @@
 							showId={show.show_id}
 							name={show.name}
 							bust={$artistImageBust[show.show_id]}
-							onClickTitle={() => openShow(show.show_id, show.name)}
+							onClickTitle={() => openShow(show.show_id)}
 						/>
 						{#if $authStore?.isAdmin}
 							<div class="absolute top-1 right-1 z-10" onclick={(e) => e.stopPropagation()}>

@@ -1,6 +1,5 @@
 <script lang="ts">
 	import { createQuery } from '@tanstack/svelte-query';
-	import { goto } from '$app/navigation';
 	import { listAlbumTracks, albumCoverUrl } from '$lib/api/music';
 	import { navigationStore } from '$lib/stores/navigation';
 	import { mediaPlayer } from '$lib/stores/mediaPlayer';
@@ -70,14 +69,7 @@
 		mediaPlayer.playAlbumFromTrack(albumId, albumName, data.tracks, trackIndex);
 	}
 
-	function onKeyDown(e: KeyboardEvent) {
-		if (e.key === 'Escape') {
-			history.back();
-		}
-	}
 </script>
-
-<svelte:window onkeydown={onKeyDown} />
 
 <ScrollRestore path={`/music/album/${albumId}?collection=${rootCollectionId}`} />
 

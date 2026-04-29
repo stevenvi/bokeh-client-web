@@ -2,7 +2,6 @@
 	import { createQuery } from '@tanstack/svelte-query';
 	import { goto } from '$app/navigation';
 	import { listChildCollections } from '$lib/api/collections';
-	import { navigationStore } from '$lib/stores/navigation';
 	import { slideshowStore } from '$lib/stores/slideshow';
 	import CollectionTile from './CollectionTile.svelte';
 	import AdminTileMenu from './AdminTileMenu.svelte';
@@ -27,8 +26,7 @@
 		})
 	);
 
-	function openChild(id: number, name: string) {
-		navigationStore.push({ id, name, path: `/collection/${id}` });
+	function openChild(id: number) {
 		goto(`/collection/${id}`);
 	}
 
@@ -56,7 +54,7 @@
 							name={child.name}
 							type={child.type}
 							date={child.date}
-							onclick={() => openChild(child.id, child.name)}
+							onclick={() => openChild(child.id)}
 						/>
 						{#if $authStore?.isAdmin}
 							<div class="absolute top-1 right-1 z-10" onclick={(e) => e.stopPropagation()}>

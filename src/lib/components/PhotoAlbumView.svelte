@@ -1,5 +1,4 @@
 <script lang="ts">
-	import { goto } from '$app/navigation';
 	import { navigationStore } from '$lib/stores/navigation';
 	import { toolbarStore } from '$lib/stores/toolbar';
 	import { onDestroy } from 'svelte';
@@ -10,10 +9,9 @@
 	interface Props {
 		collectionId: number;
 		collectionName: string;
-		parentCollectionId: number | null;
 	}
 
-	let { collectionId, collectionName, parentCollectionId }: Props = $props();
+	let { collectionId, collectionName }: Props = $props();
 
 	type ViewMode = 'album' | 'waterfall';
 	let mode = $state<ViewMode>('album');
@@ -37,22 +35,7 @@
 		navigationStore.saveViewMode(collectionId, mode);
 	});
 
-	function onKeyDown(e: KeyboardEvent) {
-		if (e.key !== 'Escape') return;
-		if (mode === 'waterfall') {
-			mode = 'album';
-			navigationStore.clearViewMode(collectionId);
-		} else {
-			if (parentCollectionId != null) {
-				goto(`/collection/${parentCollectionId}`);
-			} else {
-				goto(navigationStore.previousPath());
-			}
-		}
-	}
 </script>
-
-<svelte:window onkeydown={onKeyDown} />
 
 <ScrollRestore path={`/collection/${collectionId}`} />
 

@@ -1,6 +1,7 @@
 <script lang="ts">
 	import { page } from '$app/state';
 	import SlideshowView from '$lib/components/SlideshowView.svelte';
+	import { useBreadcrumb } from '$lib/utils/breadcrumb.svelte';
 
 	const collectionId = $derived(Number(page.params.id));
 	const itemId = $derived(Number(page.params.itemId));
@@ -12,6 +13,13 @@
 	// View determines query params: album = non-recursive asc, waterfall = recursive desc
 	const order = $derived(view === 'waterfall' ? 'desc' : 'asc') as 'asc' | 'desc';
 	const recursive = $derived(view === 'waterfall');
+
+	useBreadcrumb(() => ({
+		id: itemId,
+		name: 'Slideshow',
+		path: page.url.pathname + page.url.search,
+		hidden: true
+	}));
 </script>
 
 <svelte:head><title>Slideshow — Bokeh</title></svelte:head>

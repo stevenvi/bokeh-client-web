@@ -6,7 +6,12 @@ export interface BreadcrumbEntry {
 	path: string;
 	/** Vertical scroll offset of the page's scroll container, captured on unmount. */
 	scrollY?: number;
+	/** Hidden entries participate in pop/back semantics but are not rendered. */
+	hidden?: boolean;
 }
+
+/** Escape handler returns true if it consumed the event. */
+export type EscapeHandler = () => boolean;
 
 function createNavigationStore() {
 	const { subscribe, update, set } = writable<BreadcrumbEntry[]>([]);
@@ -16,6 +21,9 @@ function createNavigationStore() {
 
 	/** Waterfall jump targets keyed by collection ID, preserved across view transitions. */
 	const jumpTargets = new Map<number, string | null>();
+
+	/** LIFO stack of Escape consumers. The topmost handler that returns true wins. */
+	const escapeStack: EscapeHandler[] = [];
 
 	/** Reads the current entries snapshot without subscribing. */
 	function snapshot(): BreadcrumbEntry[] {
@@ -63,6 +71,11 @@ function createNavigationStore() {
 			set([]);
 		},
 
+		/** Replace the entire trail with a single entry. Used for top-level pages like admin/profile. */
+		resetTo(entry: BreadcrumbEntry) {
+			set([entry]);
+		},
+
 		/**
 		 * Records a scroll offset on the breadcrumb entry matching `path`.
 		 * No-op if the entry isn't present (e.g. the page navigated away
@@ -102,6 +115,26 @@ function createNavigationStore() {
 
 		getJumpTarget(collectionId: number): string | null {
 			return jumpTargets.get(collectionId) ?? null;
+		},
+
+		/**
+		 * Register an Escape consumer. Returns an unregister function.
+		 * Handlers run in LIFO order; the first to return true stops propagation.
+		 */
+		pushEscapeHandler(fn: EscapeHandler): () => void {
+			escapeStack.push(fn);
+			return () => {
+				const idx = escapeStack.lastIndexOf(fn);
+				if (idx >= 0) escapeStack.splice(idx, 1);
+			};
+		},
+
+		/** Returns true if some handler consumed the event. */
+		runEscapeHandlers(): boolean {
+			for (let i = escapeStack.length - 1; i >= 0; i--) {
+				if (escapeStack[i]()) return true;
+			}
+			return false;
 		}
 	};
 }

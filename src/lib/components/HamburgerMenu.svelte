@@ -3,19 +3,13 @@
 	import { page } from '$app/state';
 	import { appStore } from '$lib/stores/app';
 	import { authStore } from '$lib/stores/auth';
-	import { navigationStore } from '$lib/stores/navigation';
+	import { navigationStore, type BreadcrumbEntry } from '$lib/stores/navigation';
 	import { toolbarStore } from '$lib/stores/toolbar';
+	import { goBack } from '$lib/utils/breadcrumb.svelte';
 	import { logout } from '$lib/api/auth';
 
 	let open = $state(false);
 	const isHome = $derived(page.url.pathname === '/');
-
-	// Label for known static routes not driven by the navigation store
-	const staticPageTitle = $derived(
-		page.url.pathname === '/admin' ? 'Admin Dashboard' :
-		page.url.pathname === '/profile' ? 'Profile' :
-		null
-	);
 
 	function close() { open = false; }
 
@@ -35,39 +29,33 @@
 		goto(path);
 	}
 
-	function goBack() {
-		const crumbs = currentCrumbs;
-		if (crumbs.length >= 2) {
-			goTo(crumbs[crumbs.length - 2].path);
-		} else {
-			goHome();
-		}
-	}
-
-	// Subscribe to get current value synchronously in derived
-	let currentCrumbs: { id: number; name: string; path: string, type?: string }[] = $state([]);
-	navigationStore.subscribe((v) => { currentCrumbs = v; });
+	// Subscribe to get current value synchronously in derived. Hidden entries
+	// participate in pop semantics but are not displayed.
+	let allCrumbs: BreadcrumbEntry[] = $state([]);
+	navigationStore.subscribe((v) => { allCrumbs = v; });
+	const currentCrumbs = $derived(allCrumbs.filter((c) => !c.hidden));
 
 	// Breadcrumb display: Home + entries, with middle collapse
 	// Always show Home, always show leaf (last entry) with full name.
 	// If >2 middle entries, collapse them to "..."
-	const breadcrumbSegments = $derived(() => {
-		let crumbs = currentCrumbs;
-		if (crumbs.length === 0) {
-			// Static page (admin, profile, etc.) — show its title as the leaf
-			return staticPageTitle
-				? [{ type: 'entry' as const, path: page.url.pathname, name: staticPageTitle, isLeaf: true }]
-				: [];
-		}
+	type Segment = { type: 'entry' | 'ellipsis'; path: string; name: string; isLeaf: boolean };
+	const breadcrumbSegments = $derived.by((): Segment[] => {
+		let crumbs: { path: string; name: string }[] = currentCrumbs;
+		if (crumbs.length === 0) return [];
 
 		if (crumbs.length > 5) {
 			// Collapse middle: Home > first > second > ... > n-1 > leaf
-			crumbs = [crumbs[0], crumbs[1], {id: -1, type: 'ellipsis', path: '', name: '...'}, crumbs[crumbs.length - 2], crumbs[crumbs.length - 1]];
+			crumbs = [
+				crumbs[0],
+				crumbs[1],
+				{ path: '', name: '...' },
+				crumbs[crumbs.length - 2],
+				crumbs[crumbs.length - 1]
+			];
 		}
 
-		// Show all: each entry gets its own segment
 		return crumbs.map((c, i) => ({
-			type: c.type ?? 'entry' as const,
+			type: c.name === '...' ? 'ellipsis' : 'entry',
 			path: c.path,
 			name: c.name,
 			isLeaf: i === crumbs.length - 1
@@ -75,9 +63,7 @@
 	});
 
 	const leafName = $derived(
-		currentCrumbs.length > 0
-			? currentCrumbs[currentCrumbs.length - 1].name
-			: (staticPageTitle ?? '')
+		currentCrumbs.length > 0 ? currentCrumbs[currentCrumbs.length - 1].name : ''
 	);
 
 	async function handleSignOut() {
@@ -129,7 +115,7 @@
 			Home
 		</button>
 
-		{#each breadcrumbSegments() as seg (seg.type === 'ellipsis' ? 'ellipsis' : seg.path)}
+		{#each breadcrumbSegments as seg (seg.type === 'ellipsis' ? 'ellipsis' : seg.path)}
 			<svg class="text-text-muted h-4 w-4 flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor">
 				<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8.25 4.5l7.5 7.5-7.5 7.5" />
 			</svg>

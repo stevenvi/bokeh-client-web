@@ -4,6 +4,8 @@
 	import { imageVariantUrl } from '$lib/api/media';
 	import { listPhotos } from '$lib/api/collections';
 	import { slideshowStore } from '$lib/stores/slideshow';
+	import { navigationStore } from '$lib/stores/navigation';
+	import { goBack } from '$lib/utils/breadcrumb.svelte';
 	import { selectVariant } from '$lib/utils/variant';
 	import type { PhotoItem } from '$lib/types';
 	import SlideshowImage from './SlideshowImage.svelte';
@@ -320,8 +322,20 @@
 		feedbackKey += 1;
 	}
 	function handleBack() {
-		history.back();
+		goBack();
 	}
+
+	// Consume Escape only when the DZI deep-zoom overlay is active. Otherwise
+	// let the layout handler pop the breadcrumb (slideshow → album/waterfall).
+	onMount(() =>
+		navigationStore.pushEscapeHandler(() => {
+			if (zoomed) {
+				zoomed = false;
+				return true;
+			}
+			return false;
+		})
+	);
 
 	function scheduleOverlayHide() {
 		if (overlayHideTimer) clearTimeout(overlayHideTimer);
@@ -437,12 +451,6 @@
 			e.preventDefault();
 			handleInteraction();
 			handleTogglePlay();
-		} else if (e.key === 'Escape') {
-			if (zoomed) {
-				zoomed = false;
-			} else {
-				handleBack();
-			}
 		}
 	}
 </script>
