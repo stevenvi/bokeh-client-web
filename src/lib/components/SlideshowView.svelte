@@ -2,7 +2,7 @@
 	import { onMount, onDestroy, tick } from 'svelte';
 	import { get } from 'svelte/store';
 	import { imageVariantUrl } from '$lib/api/media';
-	import { listPhotos } from '$lib/api/collections';
+	import { listPhotos, photoStats } from '$lib/api/collections';
 	import { slideshowStore } from '$lib/stores/slideshow';
 	import { navigationStore } from '$lib/stores/navigation';
 	import { goBack } from '$lib/utils/breadcrumb.svelte';
@@ -123,6 +123,10 @@
 	onMount(async () => {
 		if (items.length === 0) {
 			await loadInitial();
+		}
+		if (total === 0) {
+			const stats = await photoStats(collectionId, storeParams.recursive);
+			total = stats.total;
 		}
 	});
 

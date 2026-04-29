@@ -1,7 +1,7 @@
 <script lang="ts">
 	import { createQuery } from '@tanstack/svelte-query';
 	import { goto } from '$app/navigation';
-	import { listChildCollections } from '$lib/api/collections';
+	import { listChildCollections, photoStats } from '$lib/api/collections';
 	import { slideshowStore } from '$lib/stores/slideshow';
 	import CollectionTile from './CollectionTile.svelte';
 	import AdminTileMenu from './AdminTileMenu.svelte';
@@ -27,6 +27,13 @@
 		})
 	);
 
+	const statsQuery = $derived(
+		createQuery({
+			queryKey: ['photoStats', collectionId, 'non-recursive'],
+			queryFn: () => photoStats(collectionId, false)
+		})
+	);
+
 	function openChild(id: number) {
 		goto(`${basePath}/${id}`);
 	}
@@ -35,7 +42,7 @@
 		slideshowStore.set({
 			collectionId,
 			items: [item],
-			total: 0,
+			total: $statsQuery.data?.total ?? 0,
 			params: { sortOrder: 'asc', recursive: false }
 		});
 		goto(`${basePath}/slideshow/${item.ordinal}`);
