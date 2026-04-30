@@ -12,6 +12,8 @@
 		onZoomExit?: () => void;
 	}
 
+	const maxZoomLevel = 2;
+
 	let { item, active, zoomed = false, onZoom, onZoomExit }: Props = $props();
 
 	// Track which item id has fired onload so we can remember it without an effect.
@@ -93,9 +95,7 @@
 				// Snappier animations (defaults: animationTime=1.2, springStiffness=6.5)
 				animationTime: 0.6,
 				springStiffness: 10,
-				zoomPerScroll: 1.3,
-				// Allow zooming to 4x native resolution
-				maxZoomPixelRatio: 4,
+				zoomPerScroll: 1.25,
 				gestureSettingsMouse: { clickToZoom: false },
 				// eslint-disable-next-line @typescript-eslint/no-explicit-any
 				gestureSettingsTouch: { dblTapToZoom: false, pinchToZoom: true } as any
@@ -107,6 +107,14 @@
 			// the world, the first 'add-item' we see here is always the DZI.
 			viewer.addHandler('open', () => {
 				if (!viewer) return;
+				// Lock max zoom to (maxZoomLevel)x the preview's native pixel resolution NOW,
+				// while contentSize still reflects only the preview. Once
+				// maxZoomLevel is set, OSD uses it directly and ignores the
+				// contentSize-based calculation — so adding the much-larger DZI
+				// tiled image below won't expand the zoom limit.
+				// (maxZoomLevel exists at runtime but is missing from OSD's TS types.)
+				// @ts-expect-error - maxZoomLevel is a real OSD Viewport property
+				viewer.viewport.maxZoomLevel = viewer.viewport.imageToViewportZoom(maxZoomLevel);
 				viewer.world.addHandler('add-item', () => {
 					// DZI manifest is fetched and the item is in the world —
 					// tiles are now loading; spinner can go.
