@@ -60,7 +60,7 @@ function loadSavedState(): Partial<MediaPlayerState> {
 		const raw = localStorage.getItem(STORAGE_KEY);
 		if (raw) {
 			const parsed = JSON.parse(raw);
-			return {
+			const state: Partial<MediaPlayerState> = {
 				queue: parsed.queue ?? [],
 				queueIndex: parsed.queueIndex ?? 0,
 				currentTime: parsed.currentTime ?? 0,
@@ -70,6 +70,18 @@ function loadSavedState(): Partial<MediaPlayerState> {
 				visible: parsed.visible ?? false,
 				showId: parsed.showId ?? null
 			};
+			if (parsed.type === 'video' && parsed.itemId) {
+				state.type = 'video';
+				state.itemId = parsed.itemId ?? null;
+				state.title = parsed.title ?? '';
+				state.subtitle = parsed.subtitle ?? '';
+				state.thumbnailUrl = parsed.thumbnailUrl ?? null;
+				state.collectionId = parsed.collectionId ?? null;
+				state.collectionType = parsed.collectionType ?? null;
+				state.collectionPath = parsed.collectionPath ?? null;
+				state.watchPath = parsed.watchPath ?? null;
+			}
+			return state;
 		}
 	} catch {
 		// ignore
@@ -80,9 +92,10 @@ function loadSavedState(): Partial<MediaPlayerState> {
 function createMediaPlayerStore() {
 	const saved = typeof localStorage !== 'undefined' ? loadSavedState() : {};
 	const hasAudioQueue = (saved.queue?.length ?? 0) > 0;
+	const hasVideoState = saved.type === 'video' && !!saved.itemId;
 
 	const { subscribe, update } = writable<MediaPlayerState>({
-		type: hasAudioQueue ? 'audio' : null,
+		type: hasAudioQueue ? 'audio' : (hasVideoState ? 'video' : null),
 		isPlaying: false,
 		currentTime: saved.currentTime ?? 0,
 		duration: 0,
@@ -94,14 +107,14 @@ function createMediaPlayerStore() {
 		shuffle: saved.shuffle ?? false,
 		repeat: saved.repeat ?? 'none',
 		showId: saved.showId ?? null,
-		itemId: null,
-		title: '',
-		subtitle: '',
-		thumbnailUrl: null,
-		collectionId: null,
-		collectionType: null,
-		collectionPath: null,
-		watchPath: null,
+		itemId: saved.itemId ?? null,
+		title: saved.title ?? '',
+		subtitle: saved.subtitle ?? '',
+		thumbnailUrl: saved.thumbnailUrl ?? null,
+		collectionId: saved.collectionId ?? null,
+		collectionType: saved.collectionType ?? null,
+		collectionPath: saved.collectionPath ?? null,
+		watchPath: saved.watchPath ?? null,
 		bookmarkSeconds: null
 	});
 
@@ -120,19 +133,29 @@ function createMediaPlayerStore() {
 
 	function persist(state: MediaPlayerState) {
 		try {
-			localStorage.setItem(
-				STORAGE_KEY,
-				JSON.stringify({
-					queue: state.queue,
-					queueIndex: state.queueIndex,
-					currentTime: state.currentTime,
-					volume: state.volume,
-					shuffle: state.shuffle,
-					repeat: state.repeat,
-					visible: state.visible,
-					showId: state.showId
-				})
-			);
+			// eslint-disable-next-line @typescript-eslint/no-explicit-any
+			const data: Record<string, any> = {
+				queue: state.queue,
+				queueIndex: state.queueIndex,
+				currentTime: state.currentTime,
+				volume: state.volume,
+				shuffle: state.shuffle,
+				repeat: state.repeat,
+				visible: state.visible,
+				showId: state.showId,
+				type: state.type
+			};
+			if (state.type === 'video') {
+				data.itemId = state.itemId;
+				data.title = state.title;
+				data.subtitle = state.subtitle;
+				data.thumbnailUrl = state.thumbnailUrl;
+				data.collectionId = state.collectionId;
+				data.collectionType = state.collectionType;
+				data.collectionPath = state.collectionPath;
+				data.watchPath = state.watchPath;
+			}
+			localStorage.setItem(STORAGE_KEY, JSON.stringify(data));
 		} catch {
 			// ignore quota errors
 		}
@@ -290,8 +313,78 @@ function createMediaPlayerStore() {
 				{ once: true }
 			);
 		}
+
+		const thumbnail = state.showId != null ? artistImageUrl(state.showId) : albumCoverUrl(track.albumId);
+		update((s) => ({
+			...s,
+			title: track.title,
+			subtitle: track.artistName ?? track.albumName,
+			thumbnailUrl: thumbnail
+		}));
+
 		setupMediaSession(track);
 		preloadNextAudio();
+	}
+
+	async function restoreVideoSession() {
+		if (!videoEl) return;
+		const state = get({ subscribe });
+		if (!state.itemId) return;
+
+		const savedTime = state.currentTime;
+
+		function updateDuration() {
+			if (videoEl) {
+				const dur = videoEl.duration;
+				if (isFinite(dur) && dur > 0) {
+					update((s) => (s.type === 'video' ? { ...s, duration: dur } : s));
+				}
+			}
+		}
+		videoEl.onloadedmetadata = () => {
+			updateDuration();
+			if (videoEl && savedTime > 0 && isFinite(videoEl.duration)) {
+				videoEl.currentTime = savedTime;
+			}
+		};
+		videoEl.ondurationchange = updateDuration;
+		videoEl.onplay = () => update((s) => (s.type === 'video' ? { ...s, isPlaying: true } : s));
+		videoEl.onpause = () => update((s) => (s.type === 'video' ? { ...s, isPlaying: false } : s));
+
+		const { getStreamUrl } = await import('$lib/api/video');
+		const streamUrl = getStreamUrl(state.itemId);
+
+		if (hlsInstance) {
+			hlsInstance.destroy();
+			hlsInstance = null;
+		}
+
+		try {
+			const res = await fetch(streamUrl, { credentials: 'include', redirect: 'follow' });
+			const finalUrl = res.url;
+
+			if (finalUrl.endsWith('.m3u8')) {
+				const Hls = (await import('hls.js')).default;
+				if (Hls.isSupported()) {
+					hlsInstance = new Hls();
+					hlsInstance.loadSource(finalUrl);
+					hlsInstance.attachMedia(videoEl);
+					// eslint-disable-next-line @typescript-eslint/no-explicit-any
+					hlsInstance.on(Hls.Events.LEVEL_LOADED, (_: string, data: any) => {
+						const totalduration = data?.details?.totalduration;
+						if (totalduration && isFinite(totalduration) && totalduration > 0) {
+							update((s) => (s.type === 'video' ? { ...s, duration: totalduration } : s));
+						}
+					});
+				} else {
+					videoEl.src = finalUrl;
+				}
+			} else {
+				videoEl.src = finalUrl;
+			}
+		} catch {
+			// stream fetch failed — no-op
+		}
 	}
 
 	function playCurrentAudioTrack() {
@@ -367,10 +460,11 @@ function createMediaPlayerStore() {
 		videoEl = video;
 		videoEl.crossOrigin = 'use-credentials';
 
-		// Restore audio session if there was a saved queue
 		const state = get({ subscribe });
 		if (state.type === 'audio' && state.queue.length > 0) {
 			restoreAudioSession();
+		} else if (state.type === 'video' && state.itemId != null) {
+			restoreVideoSession();
 		}
 	}
 
@@ -462,25 +556,29 @@ function createMediaPlayerStore() {
 		videoEl.onplay = () => update((s) => (s.type === 'video' ? { ...s, isPlaying: true } : s));
 		videoEl.onpause = () => update((s) => (s.type === 'video' ? { ...s, isPlaying: false } : s));
 
-		update((s) => ({
-			...s,
-			type: 'video' as const,
-			itemId: params.itemId,
-			title: params.title,
-			subtitle: params.collectionName,
-			thumbnailUrl: params.thumbnailUrl,
-			collectionId: params.collectionId,
-			collectionType: params.collectionType,
-			collectionPath: params.collectionPath,
-			watchPath: params.watchPath,
-			bookmarkSeconds: params.bookmarkSeconds,
-			isPlaying: false,
-			currentTime: 0,
-			duration: 0,
-			visible: true,
-			queue: [],
-			queueIndex: 0
-		}));
+		update((s) => {
+			const ns: MediaPlayerState = {
+				...s,
+				type: 'video' as const,
+				itemId: params.itemId,
+				title: params.title,
+				subtitle: params.collectionName,
+				thumbnailUrl: params.thumbnailUrl,
+				collectionId: params.collectionId,
+				collectionType: params.collectionType,
+				collectionPath: params.collectionPath,
+				watchPath: params.watchPath,
+				bookmarkSeconds: params.bookmarkSeconds,
+				isPlaying: false,
+				currentTime: 0,
+				duration: 0,
+				visible: true,
+				queue: [],
+				queueIndex: 0
+			};
+			persist(ns);
+			return ns;
+		});
 
 		const { getStreamUrl } = await import('$lib/api/video');
 		const streamUrl = getStreamUrl(params.itemId);
@@ -533,6 +631,11 @@ function createMediaPlayerStore() {
 			}
 			return next;
 		});
+		const now = Date.now();
+		if (now - lastPersistTime >= 1000) {
+			lastPersistTime = now;
+			persist(get({ subscribe }));
+		}
 	}
 
 	function play() {
@@ -696,7 +799,11 @@ function createMediaPlayerStore() {
 			});
 		} else if (state.type === 'video') {
 			stopVideo();
-			update((s) => ({ ...s, type: null as null, isPlaying: false, visible: false, itemId: null, collectionPath: null, watchPath: null }));
+			update((s) => {
+				const ns = { ...s, type: null as null, isPlaying: false, visible: false, itemId: null, collectionPath: null, watchPath: null };
+				persist(ns);
+				return ns;
+			});
 		}
 	}
 
