@@ -4,6 +4,7 @@
 	import { listCollections } from '$lib/api/collections';
 	import CollectionTile from '$lib/components/CollectionTile.svelte';
 	import AdminCollectionMenu from '$lib/components/AdminCollectionMenu.svelte';
+	import ScrollRestore from '$lib/components/ScrollRestore.svelte';
 	import { authStore } from '$lib/stores/auth';
 	import { useBreadcrumb } from '$lib/utils/breadcrumb.svelte';
 
@@ -60,3 +61,5 @@
 		</div>
 	{/if}
 </main>
+
+<ScrollRestore path="/video" />

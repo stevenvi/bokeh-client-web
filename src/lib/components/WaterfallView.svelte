@@ -6,6 +6,7 @@
 	import { navigationStore } from '$lib/stores/navigation';
 	import { slideshowStore } from '$lib/stores/slideshow';
 	import MonthGroup from './MonthGroup.svelte';
+	import ScrollRestore from './ScrollRestore.svelte';
 	import YearScrollbar from './YearScrollbar.svelte';
 	import type { PhotoItem, SlideshowMonthCount } from '$lib/types';
 
@@ -384,3 +385,5 @@
 		}}
 	/>
 </div>
+
+<ScrollRestore path={basePath} />

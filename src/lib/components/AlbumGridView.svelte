@@ -6,6 +6,7 @@
 	import CollectionTile from './CollectionTile.svelte';
 	import AdminTileMenu from './AdminTileMenu.svelte';
 	import MediaGrid from './MediaGrid.svelte';
+	import ScrollRestore from './ScrollRestore.svelte';
 	import type { PhotoItem } from '$lib/types';
 	import { authStore } from '$lib/stores/auth';
 	import { adminCreateJob, adminUploadCollectionCover } from '$lib/api/admin';
@@ -79,3 +80,5 @@
 
 	<MediaGrid {collectionId} onItemClick={handleItemClick} suppressEmpty={!!($childQuery.data?.length)} />
 </div>
+
+<ScrollRestore path={basePath} />
