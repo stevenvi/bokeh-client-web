@@ -155,6 +155,11 @@
 			// is fully disabled. Protects against the entry animation itself triggering.
 			const AUTO_EXIT_GRACE_MS = 350;
 			let hasZoomedIn = false;
+			// When the user zooms back to home, we first animate the viewport to
+			// perfect centered-fit (via OSD's own spring) and only fade out once
+			// that re-center animation finishes. This flag distinguishes the two
+			// animation-finish events.
+			let homingForExit = false;
 			viewer.addHandler('zoom', (e: { zoom: number }) => {
 				if (!viewer) return;
 				const minZoom = viewer.viewport.getMinZoom();
@@ -163,13 +168,38 @@
 				}
 			});
 			viewer.addHandler('animation-finish', () => {
-				if (!viewer || !hasZoomedIn) return;
+				if (!viewer) return;
 				if (performance.now() - initTime < AUTO_EXIT_GRACE_MS) return;
+				// Second animation-finish: the recenter-home animation just ended.
+				// Confirm we're still at home (user didn't re-engage), then fade out.
+				if (homingForExit) {
+					homingForExit = false;
+					const zoom = viewer.viewport.getZoom();
+					const minZoom = viewer.viewport.getMinZoom();
+					if (zoom <= minZoom * 1.01) {
+						hasZoomedIn = false;
+						exitDzi();
+					}
+					return;
+				}
+				if (!hasZoomedIn) return;
 				const zoom = viewer.viewport.getZoom();
 				const minZoom = viewer.viewport.getMinZoom();
 				if (zoom <= minZoom * 1.01) {
-					hasZoomedIn = false;
-					exitDzi();
+					// Smoothly animate to perfect centered-fit so the OSD canvas
+					// matches the centered preview underneath before the fade.
+					// If we're already centered, skip the wait and exit now.
+					const home = viewer.viewport.getHomeBounds().getCenter();
+					const current = viewer.viewport.getCenter();
+					const dx = current.x - home.x;
+					const dy = current.y - home.y;
+					if (dx * dx + dy * dy < 1e-6) {
+						hasZoomedIn = false;
+						exitDzi();
+					} else {
+						homingForExit = true;
+						viewer.viewport.goHome(false);
+					}
 				}
 			});
 		});
