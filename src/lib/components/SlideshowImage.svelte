@@ -81,6 +81,9 @@
 		onZoom?.();
 		requestAnimationFrame(() => {
 			if (!dziContainer) return;
+			// Timestamp viewer construction so we can suppress auto-exit during the
+			// initial entry animation (see animation-finish handler below).
+			const initTime = performance.now();
 			// Seed OSD with the preview image so the user can zoom immediately while
 			// the high-res DZI manifest loads in the background.
 			viewer = OpenSeadragon({
@@ -141,16 +144,27 @@
 			// Auto-exit DZI when the user zooms all the way back to the home (fit) level.
 			// Use 'zoom' to track whether the user has zoomed in, and 'animation-finish'
 			// to check the final resting zoom after easing completes.
+			//
+			// The arming threshold must be high enough that a single small wheel-tick or
+			// the tail of the entry-spring doesn't satisfy it — otherwise the spring
+			// settles back near home, animation-finish fires, and we accidentally exit
+			// during what the user intended as zoom-in. Require the user to zoom 25%
+			// past fit before auto-exit can fire.
+			const AUTO_EXIT_ARM_THRESHOLD = 1.25;
+			// Additional grace period after viewer construction during which auto-exit
+			// is fully disabled. Protects against the entry animation itself triggering.
+			const AUTO_EXIT_GRACE_MS = 350;
 			let hasZoomedIn = false;
 			viewer.addHandler('zoom', (e: { zoom: number }) => {
 				if (!viewer) return;
 				const minZoom = viewer.viewport.getMinZoom();
-				if (e.zoom > minZoom * 1.05) {
+				if (e.zoom > minZoom * AUTO_EXIT_ARM_THRESHOLD) {
 					hasZoomedIn = true;
 				}
 			});
 			viewer.addHandler('animation-finish', () => {
 				if (!viewer || !hasZoomedIn) return;
+				if (performance.now() - initTime < AUTO_EXIT_GRACE_MS) return;
 				const zoom = viewer.viewport.getZoom();
 				const minZoom = viewer.viewport.getMinZoom();
 				if (zoom <= minZoom * 1.01) {
