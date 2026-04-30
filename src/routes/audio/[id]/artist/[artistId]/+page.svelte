@@ -2,6 +2,7 @@
 	import { page } from '$app/state';
 	import { createQuery } from '@tanstack/svelte-query';
 	import { getCollection } from '$lib/api/collections';
+	import { listArtistAlbums } from '$lib/api/music';
 	import { applyBreadcrumbs } from '$lib/utils/collectionPath';
 	import ArtistView from '$lib/components/ArtistView.svelte';
 
@@ -15,14 +16,22 @@
 		})
 	);
 
-	// Ensure Audio and collection crumbs exist for fresh loads.
-	// ArtistView pushes the artist entry itself once its data loads.
+	// Same query key as ArtistView — data comes from cache on back-navigation.
+	const artistQuery = $derived(
+		createQuery({
+			queryKey: ['music', 'collection', rootCollectionId, 'artist', artistId, 'albums'],
+			queryFn: () => listArtistAlbums(rootCollectionId, artistId)
+		})
+	);
+
 	$effect(() => {
 		const col = $collectionQuery.data;
-		if (!col) return;
+		const artist = $artistQuery.data?.artist;
+		if (!col || !artist) return;
 		applyBreadcrumbs([
 			{ id: -2, name: 'Audio', path: '/audio' },
-			{ id: col.id, name: col.name, path: `/audio/${col.id}` }
+			{ id: col.id, name: col.name, path: `/audio/${col.id}` },
+			{ id: artistId, name: artist.name, path: `/audio/${col.id}/artist/${artistId}` }
 		]);
 	});
 </script>
