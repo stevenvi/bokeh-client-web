@@ -7,6 +7,7 @@
 	import type { VideoItemView } from '$lib/types';
 	import type { ItemsPage } from '$lib/api/collections';
 	import BackButton from './BackButton.svelte';
+	import PlayPauseFeedback from './PlayPauseFeedback.svelte';
 
 	const queryClient = useQueryClient();
 
@@ -21,16 +22,33 @@
 		updateLocalBookmark(ps.itemId, pos);
 	}
 
+	function onKeyDown(e: KeyboardEvent) {
+		const s = $mediaPlayer;
+		if (s.type !== 'video' || !s.isFullPlayer) return;
+		if (e.key === ' ') {
+			e.preventDefault();
+			togglePlayWithFeedback();
+		} else if (e.key === 'ArrowLeft') {
+			e.preventDefault();
+			if (videoEl) mediaPlayer.seekTo(Math.max(0, videoEl.currentTime - 10));
+		} else if (e.key === 'ArrowRight') {
+			e.preventDefault();
+			if (videoEl) mediaPlayer.seekTo(Math.min(isFinite(s.duration) ? s.duration : Infinity, videoEl.currentTime + 10));
+		}
+	}
+
 	onMount(() => {
 		mediaPlayer.setElements(audioEl, videoEl);
 
 		document.addEventListener('fullscreenchange', onFullscreenChange);
+		document.addEventListener('keydown', onKeyDown);
 		// iOS Safari fires these on the video element instead of document
 		videoEl.addEventListener('webkitbeginfullscreen', () => { isBrowserFullscreen = true; });
 		videoEl.addEventListener('webkitendfullscreen', () => { isBrowserFullscreen = false; });
 		videoEl.addEventListener('pause', onVideoPause);
 		return () => {
 			document.removeEventListener('fullscreenchange', onFullscreenChange);
+			document.removeEventListener('keydown', onKeyDown);
 			videoEl.removeEventListener('pause', onVideoPause);
 		};
 	});
@@ -219,6 +237,18 @@
 		else controlsVisible = true;
 	});
 
+	// ── Play/pause feedback animation ──
+	let feedbackPlaying = $state(false);
+	let feedbackKey = $state(0);
+
+	function togglePlayWithFeedback() {
+		const nowPlaying = !$mediaPlayer.isPlaying;
+		if (nowPlaying) mediaPlayer.play(); else mediaPlayer.pause();
+		feedbackPlaying = nowPlaying;
+		feedbackKey += 1;
+		showControls();
+	}
+
 	// ── Fullscreen ──
 	let isBrowserFullscreen = $state(false);
 
@@ -311,6 +341,11 @@
 	</div>
 {/if}
 
+<!-- Play/pause feedback flash -->
+{#if showFullPlayer}
+	<PlayPauseFeedback playing={feedbackPlaying} {feedbackKey} class="fixed inset-0 z-[50]" />
+{/if}
+
 <!-- Full player controls overlay -->
 {#if showFullPlayer}
 	<!-- svelte-ignore a11y_click_events_have_key_events -->
@@ -319,20 +354,28 @@
 		class="fixed inset-0 z-[49] flex flex-col"
 		onmousemove={showControls}
 		ontouchstart={showControls}
-		onclick={showControls}
+		onclick={togglePlayWithFeedback}
 	>
 		<!-- Top breadcrumb (hidden in browser fullscreen) -->
 		{#if !isBrowserFullscreen}
-			<div class="pointer-events-auto flex items-center bg-gradient-to-b from-black/60 to-transparent px-4 py-3">
+			<!-- svelte-ignore a11y_click_events_have_key_events -->
+			<!-- svelte-ignore a11y_no_static_element_interactions -->
+			<div
+				class="pointer-events-auto flex items-center bg-gradient-to-b from-black/60 to-transparent px-4 py-3"
+				onclick={(e) => e.stopPropagation()}
+			>
 				<BackButton onclick={() => { mediaPlayer.setIsFullPlayer(false); if (ps.collectionPath) goto(ps.collectionPath); else history.back(); }} />
 			</div>
 		{/if}
 
 		<!-- Bottom controls bar -->
+		<!-- svelte-ignore a11y_click_events_have_key_events -->
+		<!-- svelte-ignore a11y_no_static_element_interactions -->
 		<div
 			class="pointer-events-auto mt-auto bg-gradient-to-t from-black/80 to-transparent px-4 py-4 transition-opacity duration-300"
 			class:opacity-0={!controlsVisible}
 			class:pointer-events-none={!controlsVisible}
+			onclick={(e) => e.stopPropagation()}
 		>
 			<!-- Controls row -->
 			<div class="flex items-center justify-between">
