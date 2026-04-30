@@ -7,7 +7,9 @@
 	import { toolbarStore } from '$lib/stores/toolbar';
 	import { goBack } from '$lib/utils/breadcrumb.svelte';
 	import { logout } from '$lib/api/auth';
+	import { useQueryClient } from '@tanstack/svelte-query';
 
+	const queryClient = useQueryClient();
 	let open = $state(false);
 	const isHome = $derived(page.url.pathname === '/');
 
@@ -74,6 +76,7 @@
 	async function handleSignOut() {
 		close();
 		try { await logout(); } catch { /* ignore */ }
+		queryClient.clear();
 		authStore.clearClaims();
 		appStore.signOut();
 	}
@@ -81,6 +84,7 @@
 	async function handleDisconnect() {
 		close();
 		try { await logout(); } catch { /* ignore */ }
+		queryClient.clear();
 		authStore.clearClaims();
 		appStore.disconnect();
 	}

@@ -1,6 +1,9 @@
 <script lang="ts">
 	import { appStore } from '$lib/stores/app';
 	import { logout } from '$lib/api/auth';
+	import { useQueryClient } from '@tanstack/svelte-query';
+
+	const queryClient = useQueryClient();
 
 	let retryInterval: ReturnType<typeof setInterval> | null = null;
 
@@ -41,6 +44,7 @@
 		} catch {
 			// ignore
 		}
+		queryClient.clear();
 		appStore.disconnect();
 	}
 </script>
