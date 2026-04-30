@@ -5,8 +5,8 @@
 
 	const pathParam = $derived(page.params.path ?? '');
 
-	// Read ordinal once — not reactive.
-	const startOrdinal = Number(page.params.ordinal);
+	// Read ordinal once — not reactive. URL uses 1-based ordinals; internally 0-based to match server.
+	const startOrdinal = Number(page.params.ordinal) - 1;
 
 	let loadState = $state<'loading' | 'error' | 'loaded'>('loading');
 	let collectionId = $state(0);
@@ -31,7 +31,7 @@
 			}
 			const leaf = collections[collections.length - 1];
 			const waterfallPath = '/photo/' + path + '/waterfall';
-			const slideshowPath = waterfallPath + '/slideshow/' + startOrdinal;
+			const slideshowPath = waterfallPath + '/slideshow/' + (startOrdinal + 1);
 			applyBreadcrumbs([
 				{ id: -1, name: 'Photos', path: '/photo' },
 				...collections.map((col, i) => ({
@@ -51,7 +51,7 @@
 	});
 
 	function handleOrdinalChange(ordinal: number) {
-		const newUrl = '/photo/' + pathParam + '/waterfall/slideshow/' + ordinal;
+		const newUrl = '/photo/' + pathParam + '/waterfall/slideshow/' + (ordinal + 1);
 		history.replaceState({ ...history.state }, '', newUrl);
 	}
 </script>

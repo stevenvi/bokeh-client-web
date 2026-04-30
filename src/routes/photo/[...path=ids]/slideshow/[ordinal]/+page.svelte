@@ -6,9 +6,9 @@
 
 	const pathParam = $derived(page.params.path ?? '');
 
-	// Read ordinal once — not reactive. The URL updates as the user navigates
-	// but routeKey excludes the ordinal so the page never remounts per slide.
-	const startOrdinal = Number(page.params.ordinal);
+	// Read ordinal once — not reactive. The URL uses 1-based ordinals for display;
+	// internally startOrdinal is 0-based to match server/item ordinals.
+	const startOrdinal = Number(page.params.ordinal) - 1;
 
 	let loadState = $state<'loading' | 'error' | 'loaded'>('loading');
 	let collectionId = $state(0);
@@ -32,7 +32,7 @@
 				return;
 			}
 			const leaf = collections[collections.length - 1];
-			const slideshowPath = '/photo/' + path + '/slideshow/' + startOrdinal;
+			const slideshowPath = '/photo/' + path + '/slideshow/' + (startOrdinal + 1);
 			applyBreadcrumbs([
 				{ id: -1, name: 'Photos', path: '/photo' },
 				...collections.map((col, i) => ({
@@ -51,7 +51,7 @@
 	});
 
 	function handleOrdinalChange(ordinal: number) {
-		replaceState('/photo/' + pathParam + '/slideshow/' + ordinal, {});
+		replaceState('/photo/' + pathParam + '/slideshow/' + (ordinal + 1), {});
 	}
 </script>
 

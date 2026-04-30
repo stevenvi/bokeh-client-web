@@ -46,7 +46,7 @@
 			total: $statsQuery.data?.total ?? 0,
 			params: { sortOrder: 'asc', recursive: false }
 		});
-		goto(`${basePath}/slideshow/${item.ordinal}`);
+		goto(`${basePath}/slideshow/${item.ordinal + 1}`);
 	}
 </script>
 

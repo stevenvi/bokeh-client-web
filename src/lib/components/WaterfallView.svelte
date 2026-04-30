@@ -332,7 +332,7 @@
 			total: $statsQuery.data?.total ?? 0,
 			params: { sortOrder: 'desc', recursive: true }
 		});
-		goto(`${basePath}/slideshow/${item.ordinal}`);
+		goto(`${basePath}/slideshow/${item.ordinal + 1}`);
 	}
 
 	// Whether the year scrollbar will be visible (mirrors its internal logic)
