@@ -39,12 +39,11 @@
 	});
 
 	let showDzi = $state(false);
+	let osdReady = $state(false);
 	let dziLoading = $state(false);
-	let hideBackdrop = $state(false);
-	let dziFadingOut = $state(false);
+	let exitingToHome = $state(false);
 	let dziContainer: HTMLDivElement | null = $state(null);
 	let viewer: OpenSeadragon.Viewer | null = null;
-	let exitTimer: ReturnType<typeof setTimeout> | null = null;
 
 	const variant = $derived(selectVariant(window.innerWidth, window.innerHeight));
 	const fullSrc = $derived(imageVariantUrl(item.id, variant));
@@ -53,10 +52,9 @@
 	$effect(() => {
 		item; // track
 		showDzi = false;
+		osdReady = false;
 		dziLoading = false;
-		hideBackdrop = false;
-		dziFadingOut = false;
-		if (exitTimer) { clearTimeout(exitTimer); exitTimer = null; }
+		exitingToHome = false;
 		if (viewer) {
 			viewer.destroy();
 			viewer = null;
@@ -132,14 +130,20 @@
 				});
 			});
 
-			// First tile drawn (preview from cache — very fast) means OSD canvas is
-			// painting; fade out the <img> backdrop so only the OSD canvas shows.
-			let firstTileDrawn = false;
-			viewer.addHandler('tile-drawn', () => {
-				if (firstTileDrawn) return;
-				firstTileDrawn = true;
-				hideBackdrop = true;
-			});
+			// OSD has rendered at least once: the canvas is now displaying the
+			// image, so we can remove the <img> backdrop. We listen on multiple
+			// events because 'tile-drawn' isn't reliably emitted for
+			// type:'image' sources across OSD versions; 'update-viewport' fires
+			// on every render and is a reliable backup. Whichever fires first
+			// wins; the flag prevents repeat work.
+			let osdHasRendered = false;
+			const markOsdRendered = () => {
+				if (osdHasRendered) return;
+				osdHasRendered = true;
+				osdReady = true;
+			};
+			viewer.addHandler('tile-drawn', markOsdRendered);
+			viewer.addHandler('update-viewport', markOsdRendered);
 
 			// Auto-exit DZI when the user zooms all the way back to the home (fit) level.
 			// Use 'zoom' to track whether the user has zoomed in, and 'animation-finish'
@@ -155,11 +159,6 @@
 			// is fully disabled. Protects against the entry animation itself triggering.
 			const AUTO_EXIT_GRACE_MS = 350;
 			let hasZoomedIn = false;
-			// When the user zooms back to home, we first animate the viewport to
-			// perfect centered-fit (via OSD's own spring) and only fade out once
-			// that re-center animation finishes. This flag distinguishes the two
-			// animation-finish events.
-			let homingForExit = false;
 			viewer.addHandler('zoom', (e: { zoom: number }) => {
 				if (!viewer) return;
 				const minZoom = viewer.viewport.getMinZoom();
@@ -170,36 +169,13 @@
 			viewer.addHandler('animation-finish', () => {
 				if (!viewer) return;
 				if (performance.now() - initTime < AUTO_EXIT_GRACE_MS) return;
-				// Second animation-finish: the recenter-home animation just ended.
-				// Confirm we're still at home (user didn't re-engage), then fade out.
-				if (homingForExit) {
-					homingForExit = false;
-					const zoom = viewer.viewport.getZoom();
-					const minZoom = viewer.viewport.getMinZoom();
-					if (zoom <= minZoom * 1.01) {
-						hasZoomedIn = false;
-						exitDzi();
-					}
-					return;
-				}
 				if (!hasZoomedIn) return;
 				const zoom = viewer.viewport.getZoom();
 				const minZoom = viewer.viewport.getMinZoom();
 				if (zoom <= minZoom * 1.01) {
-					// Smoothly animate to perfect centered-fit so the OSD canvas
-					// matches the centered preview underneath before the fade.
-					// If we're already centered, skip the wait and exit now.
-					const home = viewer.viewport.getHomeBounds().getCenter();
-					const current = viewer.viewport.getCenter();
-					const dx = current.x - home.x;
-					const dy = current.y - home.y;
-					if (dx * dx + dy * dy < 1e-6) {
-						hasZoomedIn = false;
-						exitDzi();
-					} else {
-						homingForExit = true;
-						viewer.viewport.goHome(false);
-					}
+					hasZoomedIn = false;
+					// exitDzi handles re-centering to home before tearing down OSD.
+					exitDzi();
 				}
 			});
 		});
@@ -220,26 +196,50 @@
 		}
 	}
 
+	function isViewerAtHome(v: OpenSeadragon.Viewer): boolean {
+		const minZoom = v.viewport.getMinZoom();
+		const zoom = v.viewport.getZoom();
+		const home = v.viewport.getHomeBounds().getCenter();
+		const current = v.viewport.getCenter();
+		const dx = current.x - home.x;
+		const dy = current.y - home.y;
+		return zoom <= minZoom * 1.01 && dx * dx + dy * dy < 1e-6;
+	}
+
 	function exitDzi() {
-		if (dziFadingOut) return;
+		if (exitingToHome || !showDzi) return;
 		// Notify parent so it can reset zoomed state
 		onZoomExit?.();
-		// Immediately show the backdrop image underneath and dismiss any lingering spinner
-		hideBackdrop = false;
+
+		// If the viewer isn't at home (fit + centered), animate it there first.
+		// The OSD canvas displays the same preview the <img> backdrop holds, so
+		// once we're back at home the swap is visually a no-op.
+		if (viewer && !isViewerAtHome(viewer)) {
+			exitingToHome = true;
+			const v = viewer;
+			const onHome = () => {
+				v.removeHandler('animation-finish', onHome);
+				exitingToHome = false;
+				if (v !== viewer) return; // viewer was destroyed (e.g. item changed)
+				teardownDzi();
+			};
+			v.addHandler('animation-finish', onHome);
+			v.viewport.goHome(false);
+			return;
+		}
+
+		teardownDzi();
+	}
+
+	function teardownDzi() {
+		// Tear down OSD and unhide the <img> in one frame — no transitions.
+		if (viewer) {
+			viewer.destroy();
+			viewer = null;
+		}
+		showDzi = false;
+		osdReady = false;
 		dziLoading = false;
-		// After 50ms, start fading out the DZI overlay
-		dziFadingOut = true;
-		exitTimer = setTimeout(() => {
-			// After the 250ms fade completes, tear down the viewer
-			exitTimer = setTimeout(() => {
-				if (viewer) {
-					viewer.destroy();
-					viewer = null;
-				}
-				showDzi = false;
-				dziFadingOut = false;
-			}, 250);
-		}, 50);
 	}
 
 	// Touch gesture detection (pinch to enter zoom, double-tap to enter/exit zoom)
@@ -305,8 +305,9 @@
 	ontouchend={onTouchEnd}
 	role="presentation"
 >
-	<!-- Thumb stand-in: shown while full image loads, only if already in browser cache -->
-	{#if thumbCached}
+	<!-- Thumb stand-in: shown while full image loads, only if already in browser
+	     cache. Hidden entirely while DZI is up. -->
+	{#if thumbCached && !showDzi}
 		<img
 			src={imageVariantUrl(item.id, 'thumb')}
 			alt=""
@@ -315,24 +316,29 @@
 		/>
 	{/if}
 
-	<!-- Full-res image — scaled to fill viewport while preserving aspect ratio -->
+	<!-- Full-res image — scaled to fill viewport while preserving aspect ratio.
+	     Stays in view during DZI entry until OSD has painted its first tile;
+	     then removed from layout (display:none) so OSD's canvas is the only
+	     thing visible. Single-frame swap, no flicker. -->
 	<img
 		src={fullSrc}
 		alt={item.title}
 		class="slideshow-img absolute inset-0"
-		class:transition-opacity={!dziFadingOut}
-		class:duration-500={!dziFadingOut}
-		class:opacity-0={!fullLoaded || hideBackdrop}
-		class:pointer-events-none={showDzi}
+		class:hidden={osdReady}
+		class:opacity-0={!fullLoaded}
 		onload={onFullLoad}
 	/>
 
-	<!-- OpenSeadragon container — transparent until tiles render over the <img> -->
+	<!-- OpenSeadragon container — visible while DZI is up. Black background only
+	     once OSD is actually painting (osdReady), so during the brief construction
+	     window the <img> below remains visible through the still-empty canvas.
+	     Once painting, bg-black blocks any transparent canvas region from
+	     exposing anything underneath. -->
 	<div
 		bind:this={dziContainer}
 		class="absolute inset-0"
+		class:bg-black={osdReady}
 		class:hidden={!showDzi}
-		class:dzi-fade-out={dziFadingOut}
 	></div>
 
 	<!-- Loading spinner while manifest/tiles are fetching -->
@@ -362,11 +368,6 @@
 		max-width: none;
 		max-height: none;
 		object-fit: contain;
-	}
-
-	.dzi-fade-out {
-		opacity: 0;
-		transition: opacity 250ms ease-out;
 	}
 
 	.dzi-spinner {
