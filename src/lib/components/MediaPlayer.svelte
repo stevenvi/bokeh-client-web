@@ -319,6 +319,8 @@
 	oncanplay={onVideoCanPlay}
 	onseeked={onVideoSeeked}
 	onended={onVideoEnded}
+	class:cursor-pointer={!ps.isFullPlayer}
+	onclick={() => { if (!ps.isFullPlayer && ps.watchPath) goto(ps.watchPath); }}
 ></video>
 
 <!-- Video loading spinner (full player) -->
