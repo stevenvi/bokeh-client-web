@@ -159,14 +159,19 @@
 
 	async function loadMore(direction: 'forward' | 'backward') {
 		if (direction === 'forward') {
-			const lastOrdinal = items.at(-1)?.ordinal ?? 0;
+			const lastOrdinal = items.at(-1)?.ordinal ?? -1;
 			if (total > 0 && lastOrdinal >= total - 1) return;
 			const page = await listPhotos(collectionId, {
 				...storeParams,
 				offset: lastOrdinal + 1,
 				limit: 200
 			});
-			const newItems = page.items.filter((i) => !items.some((x) => x.ordinal === i.ordinal));
+			// Re-read lastOrdinal after the await — concurrent loads may have grown items.
+			// Only append items strictly after the current last ordinal, sorted ascending.
+			const boundary = items.at(-1)?.ordinal ?? -1;
+			const newItems = page.items
+				.filter((i) => i.ordinal > boundary)
+				.sort((a, b) => a.ordinal - b.ordinal);
 			if (newItems.length > 0) {
 				items = [...items, ...newItems];
 				slideshowStore.appendItems(newItems);
@@ -180,7 +185,12 @@
 				offset: newOffset,
 				limit: 200
 			});
-			const newItems = page.items.filter((i) => !items.some((x) => x.ordinal === i.ordinal));
+			// Re-read firstOrdinal after the await — concurrent loads may have grown items.
+			// Only prepend items strictly before the current first ordinal, sorted ascending.
+			const boundary = items[0]?.ordinal ?? 0;
+			const newItems = page.items
+				.filter((i) => i.ordinal < boundary)
+				.sort((a, b) => a.ordinal - b.ordinal);
 			if (newItems.length > 0) {
 				items = [...newItems, ...items];
 				currentIndex += newItems.length;
