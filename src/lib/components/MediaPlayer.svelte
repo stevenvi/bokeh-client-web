@@ -353,7 +353,7 @@
 	<!-- svelte-ignore a11y_click_events_have_key_events -->
 	<!-- svelte-ignore a11y_no_static_element_interactions -->
 	<div
-		class="fixed inset-0 z-[49] flex flex-col"
+		class="fixed inset-0 z-[49] flex flex-col select-none"
 		onmousemove={showControls}
 		ontouchstart={showControls}
 		onclick={togglePlayWithFeedback}
@@ -455,7 +455,7 @@
 <!-- Mini player bar -->
 {#if showMiniPlayer}
 	<div
-		class="bg-surface-raised border-t border-border shadow-lg pb-safe"
+		class="bg-surface-raised border-t border-border shadow-lg pb-safe select-none"
 		class:pl-[110px]={ps.type === 'video'}
 	>
 		<!-- Progress bar (thin line above controls) -->
@@ -475,31 +475,40 @@
 		{#if ps.type === 'audio' && currentAudioTrack}
 			<!-- ── Audio mini player ── -->
 			<div class="flex items-center gap-3 px-3 py-2">
-				<!-- Album art thumbnail -->
-				<div class="bg-surface relative h-10 w-10 flex-shrink-0 overflow-hidden rounded">
-					{#if !coverError}
-						<img
-							src={ps.thumbnailUrl ?? ''}
-							alt=""
-							class="h-full w-full object-cover"
-							class:opacity-0={!coverLoaded}
-							onload={() => (coverLoaded = true)}
-							onerror={() => (coverError = true)}
-						/>
-					{/if}
-					{#if !coverLoaded || coverError}
-						<div class="absolute inset-0 flex items-center justify-center bg-gradient-to-br from-surface-raised to-border">
-							<svg class="text-text-muted h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-								<path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M9 19V6l12-3v13M9 19c0 1.105-1.343 2-3 2s-3-.895-3-2 1.343-2 3-2 3 .895 3 2z" />
-							</svg>
-						</div>
-					{/if}
-				</div>
+				<!-- Clickable area: cover art + track info → navigate to album/show page -->
+				<!-- svelte-ignore a11y_click_events_have_key_events -->
+				<!-- svelte-ignore a11y_no_static_element_interactions -->
+				<div
+					class="flex min-w-0 flex-1 items-center gap-3"
+					class:cursor-pointer={!!ps.collectionPath}
+					onclick={() => ps.collectionPath && goto(ps.collectionPath)}
+				>
+					<!-- Album art thumbnail -->
+					<div class="bg-surface relative h-10 w-10 flex-shrink-0 overflow-hidden rounded">
+						{#if !coverError}
+							<img
+								src={ps.thumbnailUrl ?? ''}
+								alt=""
+								class="h-full w-full object-cover"
+								class:opacity-0={!coverLoaded}
+								onload={() => (coverLoaded = true)}
+								onerror={() => (coverError = true)}
+							/>
+						{/if}
+						{#if !coverLoaded || coverError}
+							<div class="absolute inset-0 flex items-center justify-center bg-gradient-to-br from-surface-raised to-border">
+								<svg class="text-text-muted h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+									<path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M9 19V6l12-3v13M9 19c0 1.105-1.343 2-3 2s-3-.895-3-2 1.343-2 3-2 3 .895 3 2z" />
+								</svg>
+							</div>
+						{/if}
+					</div>
 
-				<!-- Track info -->
-				<div class="min-w-0 flex-1">
-					<p class="text-text-primary truncate text-sm font-medium">{ps.title}</p>
-					<p class="text-text-secondary truncate text-xs">{ps.subtitle}</p>
+					<!-- Track info -->
+					<div class="min-w-0 flex-1">
+						<p class="text-text-primary truncate text-sm font-medium">{ps.title}</p>
+						<p class="text-text-secondary truncate text-xs">{ps.subtitle}</p>
+					</div>
 				</div>
 
 				<!-- Time display -->

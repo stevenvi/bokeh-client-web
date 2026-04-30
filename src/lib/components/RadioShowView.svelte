@@ -147,7 +147,8 @@
 			data.show.name,
 			data.episodes,
 			target.globalIndex,
-			target.positionSeconds
+			target.positionSeconds,
+			`/audio/${collectionId}/show/${showId}`
 		);
 		upsertShowBookmark(showId, target.episode.id, target.positionSeconds).catch(() => {});
 	}
@@ -159,7 +160,7 @@
 		if (!ep) return;
 		const target = resumeTarget;
 		const position = target && ep.id === target.episode?.id ? target.positionSeconds : 0;
-		mediaPlayer.playShowFromEpisode(showId, data.show.name, data.episodes, globalIndex, position);
+		mediaPlayer.playShowFromEpisode(showId, data.show.name, data.episodes, globalIndex, position, `/audio/${collectionId}/show/${showId}`);
 		upsertShowBookmark(showId, ep.id, position).catch(() => {});
 	}
 

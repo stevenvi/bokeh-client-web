@@ -67,7 +67,7 @@
 	function playTrack(trackIndex: number) {
 		const data = $tracksQuery.data;
 		if (!data) return;
-		mediaPlayer.playAlbumFromTrack(albumId, albumName, data.tracks, trackIndex);
+		mediaPlayer.playAlbumFromTrack(albumId, albumName, data.tracks, trackIndex, `/audio/${rootCollectionId}/artist/${artistId}/album/${albumId}`);
 	}
 
 </script>

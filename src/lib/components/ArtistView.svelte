@@ -45,7 +45,7 @@
 	}
 
 	function playAlbum(albumId: number) {
-		mediaPlayer.playAlbum(rootCollectionId, albumId);
+		mediaPlayer.playAlbum(rootCollectionId, albumId, `/audio/${rootCollectionId}/artist/${artistId}/album/${albumId}`);
 	}
 </script>
 

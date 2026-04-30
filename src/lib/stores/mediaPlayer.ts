@@ -70,6 +70,9 @@ function loadSavedState(): Partial<MediaPlayerState> {
 				visible: parsed.visible ?? false,
 				showId: parsed.showId ?? null
 			};
+			if (parsed.type === 'audio') {
+				state.collectionPath = parsed.collectionPath ?? null;
+			}
 			if (parsed.type === 'video' && parsed.itemId) {
 				state.type = 'video';
 				state.itemId = parsed.itemId ?? null;
@@ -145,7 +148,9 @@ function createMediaPlayerStore() {
 				showId: state.showId,
 				type: state.type
 			};
-			if (state.type === 'video') {
+			if (state.type === 'audio') {
+				data.collectionPath = state.collectionPath;
+			} else if (state.type === 'video') {
 				data.itemId = state.itemId;
 				data.title = state.title;
 				data.subtitle = state.subtitle;
@@ -468,14 +473,14 @@ function createMediaPlayerStore() {
 		}
 	}
 
-	async function playAlbum(rootCollectionId: number, albumId: number) {
+	async function playAlbum(rootCollectionId: number, albumId: number, collectionPath?: string) {
 		try {
 			const data = await listAlbumTracks(rootCollectionId, albumId);
 			if (data.tracks.length === 0) return;
 			stopVideo();
 			const queue = tracksToQueue(albumId, data.album.name, data.tracks);
 			update((s) => {
-				const ns = { ...s, type: 'audio' as const, queue, queueIndex: 0, showId: null, visible: true };
+				const ns = { ...s, type: 'audio' as const, queue, queueIndex: 0, showId: null, visible: true, collectionPath: collectionPath ?? null };
 				persist(ns);
 				return ns;
 			});
@@ -489,12 +494,13 @@ function createMediaPlayerStore() {
 		albumId: number,
 		albumName: string,
 		tracks: TrackView[],
-		startIndex: number
+		startIndex: number,
+		collectionPath?: string
 	) {
 		stopVideo();
 		const queue = tracksToQueue(albumId, albumName, tracks);
 		update((s) => {
-			const ns = { ...s, type: 'audio' as const, queue, queueIndex: startIndex, showId: null, visible: true };
+			const ns = { ...s, type: 'audio' as const, queue, queueIndex: startIndex, showId: null, visible: true, collectionPath: collectionPath ?? null };
 			persist(ns);
 			return ns;
 		});
@@ -506,14 +512,15 @@ function createMediaPlayerStore() {
 		showName: string,
 		episodes: (TrackView | EpisodeView)[],
 		startIndex: number,
-		startPositionSeconds: number
+		startPositionSeconds: number,
+		collectionPath?: string
 	) {
 		stopVideo();
 		lastShowBookmarkSaved = 0;
 		// showId doubles as albumId for cover art lookups
 		const queue = tracksToQueue(showId, showName, episodes);
 		update((s) => {
-			const ns = { ...s, type: 'audio' as const, queue, queueIndex: startIndex, showId, visible: true };
+			const ns = { ...s, type: 'audio' as const, queue, queueIndex: startIndex, showId, visible: true, collectionPath: collectionPath ?? null };
 			persist(ns);
 			return ns;
 		});
