@@ -15,14 +15,18 @@
 		})
 	);
 
-	// Ensure Audio and collection crumbs exist for fresh loads.
-	// RadioShowView pushes the show entry itself.
+	// Establish the full breadcrumb trail immediately when the collection loads,
+	// including a placeholder for the show entry. RadioShowView fills in the
+	// real show name once its query resolves. Without the placeholder, pressing
+	// Escape before the episodes query resolves would navigate to /audio instead
+	// of back to the collection.
 	$effect(() => {
 		const col = $collectionQuery.data;
 		if (!col) return;
 		applyBreadcrumbs([
 			{ id: -2, name: 'Audio', path: '/audio' },
-			{ id: col.id, name: col.name, path: `/audio/${col.id}` }
+			{ id: col.id, name: col.name, path: `/audio/${col.id}` },
+			{ id: showId, name: '', path: `/audio/${col.id}/show/${showId}` }
 		]);
 	});
 </script>

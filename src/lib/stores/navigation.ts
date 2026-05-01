@@ -86,6 +86,13 @@ function createNavigationStore() {
 				// (e.g. an artist ID may equal a collection ID).
 				const existing = crumbs.findIndex((c) => c.path === entry.path);
 				if (existing >= 0) {
+					// If the matching entry is the current leaf, update it in place so
+					// child components can fill in placeholder names without truncating.
+					if (existing === crumbs.length - 1) {
+						const next = crumbs.slice();
+						next[existing] = { ...crumbs[existing], ...entry };
+						return next;
+					}
 					return crumbs.slice(0, existing + 1);
 				}
 				return [...crumbs, entry];
