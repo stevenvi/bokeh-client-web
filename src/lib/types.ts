@@ -30,6 +30,7 @@ export interface PhotoItem {
 	iso: number | null;
 	focal_length_mm: number | null;
 	focal_length_35mm_equiv: number | null;
+	collection_name?: string; // only set on search results
 }
 
 export interface VideoItemView {
@@ -212,23 +213,8 @@ export interface TracksResponse {
 }
 
 // Search types
-export interface SearchPhotoItem {
-	id: number;
-	title: string;
-	mime_type: string;
-	created_at: string | null;
-	variants_generated_at: string | null;
-	width_px: number | null;
-	height_px: number | null;
-	camera_model: string | null;
-	lens_model: string | null;
-	shutter_speed: string | null;
-	aperture: number | null;
-	iso: number | null;
-	focal_length_mm: number | null;
-	focal_length_35mm_equiv: number | null;
-	ordinal: number;
-	collection_path: number[];
+export interface SearchPhotoItem extends PhotoItem {
+	collection_name: string;
 }
 
 export interface SearchPhotosResponse {

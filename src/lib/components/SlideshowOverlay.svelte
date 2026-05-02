@@ -8,6 +8,7 @@
 		total: number;
 		hasPrev: boolean;
 		hasNext: boolean;
+		showCounter?: boolean;
 		onPrev: () => void;
 		onNext: () => void;
 		onBack: () => void;
@@ -19,6 +20,7 @@
 		total,
 		hasPrev,
 		hasNext,
+		showCounter = true,
 		onPrev,
 		onNext,
 		onBack
@@ -62,7 +64,9 @@
 	<div class="pointer-events-auto flex items-center bg-gradient-to-b from-black/60 to-transparent px-4 py-3">
 		<span class="mr-4"><BackButton onclick={(e) => { e.stopPropagation(); onBack(); }} /></span>
 		<span class="flex-1 select-none text-center text-sm font-medium text-white/90">{collectionName}</span>
-		<span class="text-white/80 text-sm font-medium">{item.ordinal + 1} / {total}</span>
+		{#if showCounter}
+			<span class="text-white/80 text-sm font-medium">{item.ordinal + 1} / {total}</span>
+		{/if}
 	</div>
 
 	<!-- Center nav arrows -->
@@ -114,7 +118,9 @@
 	<div class="pointer-events-auto flex items-center bg-gradient-to-b from-black/60 to-transparent px-4 py-3">
 		<span class="mr-4"><BackButton onclick={(e) => { e.stopPropagation(); onBack(); }} /></span>
 		<span class="flex-1 select-none truncate text-center text-sm font-medium text-white/90">{collectionName}</span>
-		<span class="text-white/80 text-sm font-medium">{item.ordinal + 1} / {total}</span>
+		{#if showCounter}
+			<span class="text-white/80 text-sm font-medium">{item.ordinal + 1} / {total}</span>
+		{/if}
 	</div>
 
 	<!-- Center nav arrows -->

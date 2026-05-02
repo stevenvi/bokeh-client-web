@@ -13,31 +13,37 @@
 	import PlayPauseFeedback from './PlayPauseFeedback.svelte';
 
 	interface Props {
-		collectionId: number;
+		collectionId?: number;
+		externalItems?: PhotoItem[];
 		autoplay: boolean;
 		order: 'asc' | 'desc';
 		recursive: boolean;
 		startOrdinal?: number | null;
 		collectionName?: string;
+		showCounter?: boolean;
 		onOrdinalChange?: (ordinal: number) => void;
+		onClose?: () => void;
 	}
 
 	let {
 		collectionId,
+		externalItems,
 		autoplay,
 		order,
 		recursive,
 		startOrdinal = null,
 		collectionName = '',
-		onOrdinalChange
+		showCounter = true,
+		onOrdinalChange,
+		onClose
 	}: Props = $props();
 
-	// Read from store on mount
-	const store = get(slideshowStore);
+	// Read from store on mount (skipped when items are provided externally)
+	const store = externalItems == null ? get(slideshowStore) : null;
 	// svelte-ignore state_referenced_locally -- intentional initial-value fork; these don't change after mount
-	let items = $state<PhotoItem[]>(store?.items ?? []);
+	let items = $state<PhotoItem[]>(externalItems ?? store?.items ?? []);
 	// svelte-ignore state_referenced_locally
-	let total = $state(store?.total ?? 0);
+	let total = $state(externalItems != null ? externalItems.length : (store?.total ?? 0));
 	// svelte-ignore state_referenced_locally -- intentional: order/recursive are props used only as initial defaults
 	const storeParams = store?.params ?? { sortOrder: order === 'desc' ? 'desc' : 'asc', recursive };
 
@@ -122,11 +128,12 @@
 	});
 
 	onMount(async () => {
+		if (externalItems != null) return;
 		if (items.length === 0) {
 			await loadInitial();
 		}
 		if (total === 0) {
-			const stats = await photoStats(collectionId, storeParams.recursive);
+			const stats = await photoStats(collectionId!, storeParams.recursive);
 			total = stats.total;
 		}
 	});
@@ -159,6 +166,7 @@
 	}
 
 	async function loadMore(direction: 'forward' | 'backward') {
+		if (externalItems != null) return;
 		if (direction === 'forward') {
 			const lastOrdinal = items.at(-1)?.ordinal ?? -1;
 			if (total > 0 && lastOrdinal >= total - 1) return;
@@ -348,15 +356,23 @@
 		feedbackKey += 1;
 	}
 	function handleBack() {
-		goBack();
+		if (onClose) {
+			onClose();
+		} else {
+			goBack();
+		}
 	}
 
-	// Consume Escape only when the DZI deep-zoom overlay is active. Otherwise
-	// let the layout handler pop the breadcrumb (slideshow → album/waterfall).
+	// Consume Escape when DZI is active, or when an onClose handler is provided
+	// (search overlay). Otherwise let the layout handler pop the breadcrumb.
 	onMount(() =>
 		navigationStore.pushEscapeHandler(() => {
 			if (zoomed) {
 				zoomed = false;
+				return true;
+			}
+			if (onClose) {
+				onClose();
 				return true;
 			}
 			return false;
@@ -539,10 +555,11 @@
 		{#if showOverlay && !zoomed}
 			<SlideshowOverlay
 				item={currentItem}
-				{collectionName}
+				collectionName={currentItem.collection_name ?? collectionName}
 				{total}
 				{hasPrev}
 				{hasNext}
+				{showCounter}
 				onPrev={handlePrev}
 				onNext={handleNext}
 				onBack={handleBack}

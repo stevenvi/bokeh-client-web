@@ -1,11 +1,11 @@
 <script lang="ts">
 	import { createInfiniteQuery } from '@tanstack/svelte-query';
-	import { goto } from '$app/navigation';
 	import { searchPhotos } from '$lib/api/search';
 	import { getPhotoColumnCount } from '$lib/utils/photoColumnCount';
 	import PhotoColumnGrid from './PhotoColumnGrid.svelte';
 	import SearchResultsEmpty from './SearchResultsEmpty.svelte';
-	import type { PhotoItem, SearchPhotoItem } from '$lib/types';
+	import SlideshowView from './SlideshowView.svelte';
+	import type { PhotoItem } from '$lib/types';
 
 	interface Props {
 		q: string;
@@ -58,12 +58,31 @@
 		loading = $query.isFetching;
 	});
 
+	let slideshowStartOrdinal: number | null = $state(null);
+	let slideshowItems: PhotoItem[] = $state([]);
+
 	function handleClick(item: PhotoItem) {
-		const original = allItems.find((i) => i.id === item.id) as SearchPhotoItem | undefined;
-		if (!original) return;
-		goto('/photo/' + original.collection_path.join('/'));
+		slideshowItems = allItems as PhotoItem[];
+		slideshowStartOrdinal = item.ordinal;
+	}
+
+	function closeSlideshow() {
+		slideshowStartOrdinal = null;
 	}
 </script>
+
+{#if slideshowStartOrdinal !== null}
+	<SlideshowView
+		externalItems={slideshowItems}
+		collectionName=""
+		autoplay={false}
+		order="asc"
+		recursive={false}
+		startOrdinal={slideshowStartOrdinal}
+		showCounter={false}
+		onClose={closeSlideshow}
+	/>
+{/if}
 
 {#if $query.isPending}
 	<div class="flex h-48 items-center justify-center">
