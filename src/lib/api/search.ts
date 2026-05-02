@@ -1,6 +1,7 @@
 import { apiFetch } from './client';
 import type {
 	SearchPhotosResponse,
+	SearchPhotoCollectionsResponse,
 	SearchVideosResponse,
 	SearchAudioArtistsResponse,
 	SearchAudioAlbumsResponse,
@@ -17,6 +18,16 @@ function buildParams(q: string, offset: number, limit: number): URLSearchParams 
 
 export function searchPhotos(q: string, offset = 0, limit = 200): Promise<SearchPhotosResponse> {
 	return apiFetch<SearchPhotosResponse>(`/api/v1/search/photos?${buildParams(q, offset, limit)}`);
+}
+
+export function searchPhotoCollections(
+	q: string,
+	offset = 0,
+	limit = 50
+): Promise<SearchPhotoCollectionsResponse> {
+	return apiFetch<SearchPhotoCollectionsResponse>(
+		`/api/v1/search/photos/collections?${buildParams(q, offset, limit)}`
+	);
 }
 
 export function searchVideos(q: string, offset = 0, limit = 50): Promise<SearchVideosResponse> {

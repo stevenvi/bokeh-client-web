@@ -223,6 +223,19 @@ export interface SearchPhotosResponse {
 	limit: number;
 }
 
+export interface SearchPhotoCollection {
+	id: number;
+	name: string;
+	collection_path: number[];
+	date: string | null;
+}
+
+export interface SearchPhotoCollectionsResponse {
+	collections: SearchPhotoCollection[];
+	offset: number;
+	limit: number;
+}
+
 export interface SearchVideoItem {
 	id: number;
 	title: string;
