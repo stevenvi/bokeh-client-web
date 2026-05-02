@@ -3,6 +3,7 @@
 	import { listAlbumTracks, albumCoverUrl } from '$lib/api/music';
 	import { navigationStore } from '$lib/stores/navigation';
 	import { mediaPlayer } from '$lib/stores/mediaPlayer';
+	import { playingTrackIdFromState } from '$lib/utils/playingTrack.svelte';
 	import type { TrackView } from '$lib/types';
 	import ScrollRestore from './ScrollRestore.svelte';
 
@@ -70,6 +71,21 @@
 		mediaPlayer.playAlbumFromTrack(albumId, albumName, data.tracks, trackIndex, `/audio/${rootCollectionId}/artist/${artistId}/album/${albumId}`);
 	}
 
+	const playingTrackId = $derived(playingTrackIdFromState($mediaPlayer, albumId));
+
+	let scrolledToPlaying = $state<number | null>(null);
+	$effect(() => {
+		if (playingTrackId == null) return;
+		if (scrolledToPlaying === playingTrackId) return;
+		if (!$tracksQuery.data) return;
+		scrolledToPlaying = playingTrackId;
+		setTimeout(() => {
+			document.getElementById(`track-${playingTrackId}`)?.scrollIntoView({
+				behavior: 'smooth',
+				block: 'center'
+			});
+		}, 50);
+	});
 </script>
 
 <ScrollRestore path={`/audio/${rootCollectionId}/artist/${artistId}/album/${albumId}`} />
@@ -123,20 +139,27 @@
 					<div class="divide-y divide-border">
 						{#each tracks as track, i}
 							{@const globalIndex = data.tracks.indexOf(track)}
+							{@const isPlaying = track.id === playingTrackId}
 							<button
-								class="group flex w-full items-center gap-3 px-2 py-2.5 text-left transition-colors hover:bg-surface-raised {globalIndex % 2 === 0 ? 'bg-teal-900/40' : ''}"
+								id="track-{track.id}"
+								class="group flex w-full items-center gap-3 px-2 py-2.5 text-left transition-colors {isPlaying ? 'bg-yellow-400 hover:bg-surface-raised' : 'hover:bg-surface-raised ' + (globalIndex % 2 === 0 ? 'bg-teal-900/40' : '')}"
 								onclick={() => playTrack(globalIndex)}
 							>
-								<span class="w-6 flex-shrink-0 text-right text-sm tabular-nums text-black group-hover:text-gray-200">
+								<span class="w-6 flex-shrink-0 text-right text-sm tabular-nums {isPlaying ? 'text-yellow-900 font-bold' : 'text-black group-hover:text-gray-200'}">
 									{track.track_number ?? i + 1}
 								</span>
 								<div class="min-w-0 flex-1">
-									<p class="text-white text-shadow-dark truncate text-sm">{track.title}</p>
+									<p class="truncate text-sm {isPlaying ? 'text-yellow-900 font-semibold' : 'text-white text-shadow-dark'}">{track.title}</p>
 									{#if track.artist_name}
-										<p class="truncate text-xs text-white/65 group-hover:text-white/90">{track.artist_name}</p>
+										<p class="truncate text-xs {isPlaying ? 'text-yellow-800' : 'text-white/65 group-hover:text-white/90'}">{track.artist_name}</p>
 									{/if}
 								</div>
-								<span class="flex-shrink-0 text-sm tabular-nums text-text-primary text-shadow-dark">
+								{#if isPlaying}
+									<svg class="text-yellow-900 h-3.5 w-3.5 flex-shrink-0" fill="currentColor" viewBox="0 0 24 24" aria-hidden="true">
+										<path d="M8 5v14l11-7z" />
+									</svg>
+								{/if}
+								<span class="flex-shrink-0 text-sm tabular-nums {isPlaying ? 'text-yellow-900' : 'text-text-primary text-shadow-dark'}">
 									{formatDuration(track.duration_seconds)}
 								</span>
 							</button>

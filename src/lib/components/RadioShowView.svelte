@@ -4,6 +4,7 @@
 	import { artistImageUrl } from '$lib/api/music';
 	import { navigationStore } from '$lib/stores/navigation';
 	import { mediaPlayer } from '$lib/stores/mediaPlayer';
+	import { playingTrackIdFromState } from '$lib/utils/playingTrack.svelte';
 	import AdminTileMenu from './AdminTileMenu.svelte';
 	import ScrollRestore from './ScrollRestore.svelte';
 	import { authStore } from '$lib/stores/auth';
@@ -108,7 +109,8 @@
 		return { episode: ep, positionSeconds: bookmark.position_seconds, globalIndex: idx };
 	});
 
-	const highlightedEpisodeId = $derived(resumeTarget?.episode?.id ?? null);
+	const playingEpisodeId = $derived(playingTrackIdFromState($mediaPlayer, showId));
+	const highlightedEpisodeId = $derived(playingEpisodeId ?? resumeTarget?.episode?.id ?? null);
 
 	// Progress bar for the highlighted episode
 	const bookmarkProgressPct = $derived.by(() => {
@@ -123,11 +125,13 @@
 	// to the page. If we have a saved scroll position from the breadcrumb
 	// stack, ScrollRestore handles placement and we should not override it.
 	const showPath = $derived(`/audio/${collectionId}/show/${showId}`);
-	let scrolled = $state(false);
+	let scrolledToEpisode = $state<number | null>(null);
 	$effect(() => {
-		if (!$episodesQuery.data || scrolled || highlightedEpisodeId == null) return;
-		scrolled = true;
-		if (navigationStore.getScrollForPath(showPath) > 0) return;
+		if (!$episodesQuery.data || highlightedEpisodeId == null) return;
+		if (scrolledToEpisode === highlightedEpisodeId) return;
+		const isFirst = scrolledToEpisode == null;
+		scrolledToEpisode = highlightedEpisodeId;
+		if (isFirst && playingEpisodeId == null && navigationStore.getScrollForPath(showPath) > 0) return;
 		setTimeout(() => {
 			document.getElementById(`episode-${highlightedEpisodeId}`)?.scrollIntoView({
 				behavior: 'smooth',

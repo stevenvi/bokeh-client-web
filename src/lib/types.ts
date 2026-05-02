@@ -210,3 +210,89 @@ export interface TracksResponse {
 	total_duration: number;
 	disc_count: number;
 }
+
+// Search types
+export interface SearchPhotoItem {
+	id: number;
+	title: string;
+	mime_type: string;
+	created_at: string | null;
+	variants_generated_at: string | null;
+	width_px: number | null;
+	height_px: number | null;
+	camera_model: string | null;
+	lens_model: string | null;
+	shutter_speed: string | null;
+	aperture: number | null;
+	iso: number | null;
+	focal_length_mm: number | null;
+	focal_length_35mm_equiv: number | null;
+	ordinal: number;
+	collection_path: number[];
+}
+
+export interface SearchPhotosResponse {
+	items: SearchPhotoItem[];
+	offset: number;
+	limit: number;
+}
+
+export interface SearchVideoItem {
+	id: number;
+	title: string;
+	collection_name: string;
+	collection_path: number[];
+	date: string | null;
+}
+
+export interface SearchVideosResponse {
+	'video:movie': SearchVideoItem[];
+	'video:home_movie': SearchVideoItem[];
+	offset: number;
+	limit: number;
+}
+
+export interface SearchAudioArtist {
+	id: number;
+	name: string;
+	collection_id: number;
+}
+
+export interface SearchAudioArtistsResponse {
+	artists: SearchAudioArtist[];
+	shows: SearchAudioArtist[];
+	offset: number;
+	limit: number;
+}
+
+export interface SearchAudioAlbum {
+	id: number;
+	name: string;
+	year: number | null;
+	collection_id: number;
+	artist_id: number;
+}
+
+export interface SearchAudioAlbumsResponse {
+	albums: SearchAudioAlbum[];
+	offset: number;
+	limit: number;
+}
+
+export interface SearchAudioTrack {
+	id: number;
+	title: string;
+	collection_type: string;
+	collection_id: number;
+	artist_id: number;
+	artist_name: string | null;
+	album_name: string | null;
+	album_id: number | null;
+	duration_seconds: number | null;
+}
+
+export interface SearchAudioTracksResponse {
+	tracks: SearchAudioTrack[];
+	offset: number;
+	limit: number;
+}

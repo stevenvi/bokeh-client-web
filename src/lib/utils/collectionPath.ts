@@ -11,6 +11,10 @@ export function parseCollectionIds(pathParam: string): number[] | null {
 	return ids;
 }
 
+export function leafCollectionId(path: number[]): number {
+	return path[path.length - 1];
+}
+
 /**
  * Fetch all collections in the ID chain in parallel and validate the
  * parent→child hierarchy. Returns null on any fetch error or hierarchy mismatch.

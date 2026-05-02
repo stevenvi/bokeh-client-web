@@ -6,14 +6,12 @@ import type { ArtistsPage, ArtistAlbumsResponse, TracksResponse } from '$lib/typ
 export function listArtists(
 	collectionId: number,
 	page = 1,
-	pageSize = 50,
-	search = ''
+	pageSize = 50
 ): Promise<ArtistsPage> {
 	const params = new URLSearchParams({
 		page: String(page),
 		page_size: String(pageSize)
 	});
-	if (search) params.set('search', search);
 	return apiFetch<ArtistsPage>(
 		`/api/v1/collections/${collectionId}/artists?${params}`
 	);

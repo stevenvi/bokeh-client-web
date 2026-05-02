@@ -8,6 +8,7 @@
 	import MonthGroup from './MonthGroup.svelte';
 	import ScrollRestore from './ScrollRestore.svelte';
 	import YearScrollbar from './YearScrollbar.svelte';
+	import { getPhotoColumnCount } from '$lib/utils/photoColumnCount';
 	import type { PhotoItem, SlideshowMonthCount } from '$lib/types';
 
 	interface Props {
@@ -145,20 +146,11 @@
 	});
 
 	// Column count based on viewport width
-	let columnCount = $state(getColumnCount());
-
-	function getColumnCount(): number {
-		if (typeof window === 'undefined') return 2;
-		const w = window.innerWidth;
-		if (w < 640) return 2;
-		if (w < 768) return 3;
-		if (w < 1024) return 4;
-		return 6;
-	}
+	let columnCount = $state(getPhotoColumnCount());
 
 	$effect(() => {
 		function onResize() {
-			columnCount = getColumnCount();
+			columnCount = getPhotoColumnCount();
 		}
 		window.addEventListener('resize', onResize);
 		return () => window.removeEventListener('resize', onResize);

@@ -1,10 +1,13 @@
 <script lang="ts">
 	import { createQuery } from '@tanstack/svelte-query';
-	import { goto } from '$app/navigation';
+	import { goto, replaceState } from '$app/navigation';
+	import { page } from '$app/state';
 	import { listCollections } from '$lib/api/collections';
 	import CollectionTile from '$lib/components/CollectionTile.svelte';
 	import AdminCollectionMenu from '$lib/components/AdminCollectionMenu.svelte';
 	import ScrollRestore from '$lib/components/ScrollRestore.svelte';
+	import SearchBar from '$lib/components/SearchBar.svelte';
+	import PhotoSearchResults from '$lib/components/PhotoSearchResults.svelte';
 	import { authStore } from '$lib/stores/auth';
 	import { useBreadcrumb } from '$lib/utils/breadcrumb.svelte';
 
@@ -18,6 +21,18 @@
 	);
 
 	useBreadcrumb(() => ({ id: -1, name: 'Photos', path: '/photo' }));
+
+	let searchValue = $state(page.url.searchParams.get('q') ?? '');
+	let debouncedQ = $state(searchValue);
+	let loading = $state(false);
+
+	function onDebouncedChange(q: string) {
+		debouncedQ = q;
+		const url = new URL(page.url);
+		if (q) url.searchParams.set('q', q);
+		else url.searchParams.delete('q');
+		replaceState(url.pathname + url.search, {});
+	}
 </script>
 
 <svelte:head>
@@ -25,9 +40,13 @@
 </svelte:head>
 
 <main class="px-4 py-6">
-	<h1 class="text-text-primary mb-6 text-2xl font-semibold">Photos</h1>
+	<div class="mb-6">
+		<SearchBar bind:value={searchValue} {loading} placeholder="Search photos..." {onDebouncedChange} />
+	</div>
 
-	{#if $collectionsQuery.isPending}
+	{#if debouncedQ.trim().length > 0}
+		<PhotoSearchResults q={debouncedQ.trim()} bind:loading />
+	{:else if $collectionsQuery.isPending}
 		<div class="grid grid-cols-2 gap-4 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6">
 			{#each Array(4) as _}
 				<div class="animate-pulse">

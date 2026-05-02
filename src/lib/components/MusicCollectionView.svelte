@@ -15,24 +15,11 @@
 	}
 
 	let { collectionId }: Props = $props();
-	let searchTerm = $state('');
-	let debouncedSearch = $state('');
-	let debounceTimer: ReturnType<typeof setTimeout>;
-
-	function onSearchInput(e: Event) {
-		const value = (e.target as HTMLInputElement).value;
-		searchTerm = value;
-		clearTimeout(debounceTimer);
-		debounceTimer = setTimeout(() => {
-			debouncedSearch = value;
-		}, 300);
-	}
 
 	const artistsQuery = $derived(
 		createInfiniteQuery({
-			queryKey: ['music', 'artists', collectionId, debouncedSearch],
-			queryFn: ({ pageParam }) =>
-				listArtists(collectionId, pageParam, 60, debouncedSearch),
+			queryKey: ['music', 'artists', collectionId],
+			queryFn: ({ pageParam }) => listArtists(collectionId, pageParam, 60),
 			initialPageParam: 1,
 			getNextPageParam: (lastPage) => {
 				const loaded = lastPage.page * lastPage.page_size;
@@ -69,18 +56,6 @@
 <ScrollRestore path={`/audio/${collectionId}`} />
 
 <div class="">
-	<!-- Search bar -->
-	<div class="px-4 pt-4">
-		<input
-			type="text"
-			placeholder="Search artists..."
-			value={searchTerm}
-			oninput={onSearchInput}
-			class="bg-surface-raised text-text-primary placeholder-text-secondary w-full rounded-lg border border-border px-4 py-2 text-sm focus:border-accent focus:outline-none"
-		/>
-	</div>
-
-	<!-- Artist grid -->
 	<div class="px-4 py-4">
 		{#if $artistsQuery.isPending}
 			<div class="flex h-48 items-center justify-center">
