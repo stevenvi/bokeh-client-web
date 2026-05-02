@@ -1,6 +1,7 @@
 <script lang="ts">
 	import { albumCoverUrl } from '$lib/api/music';
 	import MediaDate from './MediaDate.svelte';
+	import { IconMusic, IconPlay } from './icons';
 
 	interface Props {
 		albumId: number;
@@ -51,9 +52,7 @@
 			class="absolute inset-0 flex h-full w-full items-center justify-center bg-gradient-to-br from-surface-raised to-border transition-opacity duration-300"
 			class:opacity-0={coverLoaded && !coverError}
 		>
-			<svg class="text-text-muted h-12 w-12" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-				<path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M9 19V6l12-3v13M9 19c0 1.105-1.343 2-3 2s-3-.895-3-2 1.343-2 3-2 3 .895 3 2zm12-3c0 1.105-1.343 2-3 2s-3-.895-3-2 1.343-2 3-2 3 .895 3 2zM9 10l12-3" />
-			</svg>
+			<IconMusic class="text-text-muted h-12 w-12" />
 		</div>
 		<!-- Play button overlay on hover -->
 		{#if hovered}
@@ -63,9 +62,7 @@
 					onclick={(e) => { e.stopPropagation(); onClickImage?.(); }}
 					aria-label="Play album"
 				>
-					<svg class="ml-1 h-7 w-7 text-black" fill="currentColor" viewBox="0 0 24 24">
-						<path d="M8 5v14l11-7z" />
-					</svg>
+					<IconPlay class="ml-1 h-7 w-7 text-black" />
 				</button>
 			</div>
 		{/if}

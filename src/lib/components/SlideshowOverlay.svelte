@@ -1,6 +1,7 @@
 <script lang="ts">
 	import type { PhotoItem } from '$lib/types';
 	import BackButton from './BackButton.svelte';
+	import { IconChevronLeft, IconChevronRight } from './icons';
 
 	interface Props {
 		item: PhotoItem;
@@ -77,9 +78,7 @@
 				onclick={(e) => { e.stopPropagation(); onPrev(); }}
 				aria-label="Previous"
 			>
-				<svg class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-					<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15.75 19.5L8.25 12l7.5-7.5" />
-				</svg>
+				<IconChevronLeft class="h-6 w-6" />
 			</button>
 		{:else}
 			<div class="p-3"></div>
@@ -91,9 +90,7 @@
 				onclick={(e) => { e.stopPropagation(); onNext(); }}
 				aria-label="Next"
 			>
-				<svg class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-					<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8.25 4.5l7.5 7.5-7.5 7.5" />
-				</svg>
+				<IconChevronRight class="h-6 w-6" />
 			</button>
 		{:else}
 			<div class="p-3"></div>
@@ -131,9 +128,7 @@
 				onclick={(e) => { e.stopPropagation(); onPrev(); }}
 				aria-label="Previous"
 			>
-				<svg class="h-7 w-7" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-					<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15.75 19.5L8.25 12l7.5-7.5" />
-				</svg>
+				<IconChevronLeft class="h-7 w-7" />
 			</button>
 		{:else}
 			<div class="p-4"></div>
@@ -145,9 +140,7 @@
 				onclick={(e) => { e.stopPropagation(); onNext(); }}
 				aria-label="Next"
 			>
-				<svg class="h-7 w-7" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-					<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8.25 4.5l7.5 7.5-7.5 7.5" />
-				</svg>
+				<IconChevronRight class="h-7 w-7" />
 			</button>
 		{:else}
 			<div class="p-4"></div>

@@ -8,6 +8,19 @@
 	import { goBack } from '$lib/utils/breadcrumb.svelte';
 	import { logout } from '$lib/api/auth';
 	import { useQueryClient } from '@tanstack/svelte-query';
+	import {
+		IconChevronLeft,
+		IconHome,
+		IconGear,
+		IconUser,
+		IconSignOut,
+		IconDisconnect,
+		IconGridView,
+		IconWaterfallView,
+		IconMenu,
+		IconClose,
+		IconChevronRight
+	} from './icons';
 
 	const queryClient = useQueryClient();
 	let open = $state(false);
@@ -99,9 +112,7 @@
 			onclick={goBack}
 			aria-label="Go back"
 		>
-			<svg class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-				<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15.75 19.5L8.25 12l7.5-7.5" />
-			</svg>
+			<IconChevronLeft class="h-5 w-5" />
 		</button>
 		<span class="text-text-primary min-w-0 flex-1 truncate text-sm font-medium md:hidden">
 			{leafName}
@@ -118,16 +129,12 @@
 			class="text-text-secondary hover:text-text-primary flex flex-shrink-0 items-center gap-1 text-sm transition-colors"
 			onclick={goHome}
 		>
-			<svg class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-				<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M2.25 12l8.954-8.955c.44-.439 1.152-.439 1.591 0L21.75 12M4.5 9.75v10.125c0 .621.504 1.125 1.125 1.125H9.75v-4.875c0-.621.504-1.125 1.125-1.125h2.25c.621 0 1.125.504 1.125 1.125V21h4.125c.621 0 1.125-.504 1.125-1.125V9.75M8.25 21h8.25" />
-			</svg>
+			<IconHome class="h-4 w-4" />
 			Home
 		</button>
 
 		{#each breadcrumbSegments as seg (seg.type === 'ellipsis' ? 'ellipsis' : seg.path)}
-			<svg class="text-text-muted h-4 w-4 flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-				<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8.25 4.5l7.5 7.5-7.5 7.5" />
-			</svg>
+			<IconChevronRight class="text-text-muted h-4 w-4 flex-shrink-0" />
 			{#if seg.type === 'ellipsis'}
 				<span class="text-text-secondary text-sm">...</span>
 			{:else if seg.isLeaf}
@@ -154,9 +161,7 @@
 				title="Album view"
 				aria-label="Album view"
 			>
-				<svg class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-					<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3.75 6A2.25 2.25 0 016 3.75h2.25A2.25 2.25 0 0110.5 6v2.25a2.25 2.25 0 01-2.25 2.25H6a2.25 2.25 0 01-2.25-2.25V6zM3.75 15.75A2.25 2.25 0 016 13.5h2.25a2.25 2.25 0 012.25 2.25V18a2.25 2.25 0 01-2.25 2.25H6A2.25 2.25 0 013.75 18v-2.25zM13.5 6a2.25 2.25 0 012.25-2.25H18A2.25 2.25 0 0120.25 6v2.25A2.25 2.25 0 0118 10.5h-2.25A2.25 2.25 0 0113.5 8.25V6zM13.5 15.75a2.25 2.25 0 012.25-2.25H18a2.25 2.25 0 012.25 2.25V18A2.25 2.25 0 0118 20.25h-2.25A2.25 2.25 0 0113.5 18v-2.25z" />
-				</svg>
+				<IconGridView class="h-5 w-5" />
 			</button>
 
 			<button
@@ -165,9 +170,7 @@
 				title="Timeline view"
 				aria-label="Timeline view"
 			>
-				<svg class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-					<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M2.25 7.125C2.25 6.504 2.754 6 3.375 6h6c.621 0 1.125.504 1.125 1.125v3.75c0 .621-.504 1.125-1.125 1.125h-6a1.125 1.125 0 01-1.125-1.125v-3.75zM14.25 8.625c0-.621.504-1.125 1.125-1.125h5.25c.621 0 1.125.504 1.125 1.125v8.25c0 .621-.504 1.125-1.125 1.125h-5.25a1.125 1.125 0 01-1.125-1.125v-8.25zM3.75 16.125c0-.621.504-1.125 1.125-1.125h5.25c.621 0 1.125.504 1.125 1.125v2.25c0 .621-.504 1.125-1.125 1.125h-5.25a1.125 1.125 0 01-1.125-1.125v-2.25z" />
-				</svg>
+				<IconWaterfallView class="h-5 w-5" />
 			</button>
 		</div>
 	{/if}
@@ -178,9 +181,7 @@
 		onclick={() => (open = !open)}
 		aria-label="Menu"
 	>
-		<svg class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-			<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h16" />
-		</svg>
+		<IconMenu class="h-5 w-5" />
 	</button>
 </nav>
 
@@ -197,9 +198,7 @@
 		<div class="flex items-center justify-between p-4">
 			<span class="text-text-primary font-semibold">Menu</span>
 			<button onclick={close} aria-label="Close menu" class="text-text-secondary hover:text-text-primary">
-				<svg class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-					<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
-				</svg>
+				<IconClose class="h-5 w-5" />
 			</button>
 		</div>
 
@@ -209,9 +208,7 @@
 					class="text-text-primary hover:bg-surface-raised flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm md:hidden"
 					onclick={() => navigate('/')}
 				>
-					<svg class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-						<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M2.25 12l8.954-8.955c.44-.439 1.152-.439 1.591 0L21.75 12M4.5 9.75v10.125c0 .621.504 1.125 1.125 1.125H9.75v-4.875c0-.621.504-1.125 1.125-1.125h2.25c.621 0 1.125.504 1.125 1.125V21h4.125c.621 0 1.125-.504 1.125-1.125V9.75M8.25 21h8.25" />
-					</svg>
+					<IconHome class="h-5 w-5" />
 					Return Home
 				</button>
 			{/if}
@@ -221,10 +218,7 @@
 					class="text-text-primary hover:bg-surface-raised flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm"
 					onclick={() => navigate('/admin')}
 				>
-					<svg class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-						<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10.343 3.94c.09-.542.56-.94 1.11-.94h1.093c.55 0 1.02.398 1.11.94l.149.894c.07.424.384.764.78.93.398.164.855.142 1.205-.108l.737-.527a1.125 1.125 0 011.45.12l.773.774c.39.389.44 1.002.12 1.45l-.527.737c-.25.35-.272.806-.107 1.204.165.397.505.71.93.78l.893.15c.543.09.94.56.94 1.109v1.094c0 .55-.397 1.02-.94 1.11l-.893.149c-.425.07-.765.383-.93.78-.165.398-.143.854.107 1.204l.527.738c.32.447.269 1.06-.12 1.45l-.774.773a1.125 1.125 0 01-1.449.12l-.738-.527c-.35-.25-.806-.272-1.203-.107-.397.165-.71.505-.781.929l-.149.894c-.09.542-.56.94-1.11.94h-1.094c-.55 0-1.019-.398-1.11-.94l-.148-.894c-.071-.424-.384-.764-.781-.93-.398-.164-.854-.142-1.204.108l-.738.527c-.447.32-1.06.269-1.45-.12l-.773-.774a1.125 1.125 0 01-.12-1.45l.527-.737c.25-.35.273-.806.108-1.204-.165-.397-.505-.71-.93-.78l-.894-.15c-.542-.09-.94-.56-.94-1.109v-1.094c0-.55.398-1.02.94-1.11l.894-.149c.424-.07.765-.383.93-.78.165-.398.143-.854-.108-1.204l-.526-.738a1.125 1.125 0 01.12-1.45l.773-.773a1.125 1.125 0 011.45-.12l.737.527c.35.25.807.272 1.204.107.397-.165.71-.505.78-.929l.15-.894z" />
-						<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
-					</svg>
+					<IconGear class="h-5 w-5" />
 					Admin Dashboard
 				</button>
 			{/if}
@@ -233,9 +227,7 @@
 				class="text-text-primary hover:bg-surface-raised flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm"
 				onclick={() => navigate('/profile')}
 			>
-				<svg class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-					<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15.75 6a3.75 3.75 0 11-7.5 0 3.75 3.75 0 017.5 0zM4.501 20.118a7.5 7.5 0 0114.998 0A17.933 17.933 0 0112 21.75c-2.676 0-5.216-.584-7.499-1.632z" />
-				</svg>
+				<IconUser class="h-5 w-5" />
 				Profile
 			</button>
 		</nav>
@@ -245,18 +237,14 @@
 				class="text-text-secondary hover:bg-surface-raised flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm"
 				onclick={handleSignOut}
 			>
-				<svg class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-					<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15.75 9V5.25A2.25 2.25 0 0013.5 3h-6a2.25 2.25 0 00-2.25 2.25v13.5A2.25 2.25 0 007.5 21h6a2.25 2.25 0 002.25-2.25V15M12 9l-3 3m0 0l3 3m-3-3h12.75" />
-				</svg>
+				<IconSignOut class="h-5 w-5" />
 				Sign Out
 			</button>
 			<button
 				class="text-text-secondary hover:bg-surface-raised flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm"
 				onclick={handleDisconnect}
 			>
-				<svg class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-					<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5.636 5.636a9 9 0 1012.728 0M12 3v9" />
-				</svg>
+				<IconDisconnect class="h-5 w-5" />
 				Disconnect from Server
 			</button>
 		</div>

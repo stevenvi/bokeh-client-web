@@ -7,6 +7,7 @@
 	import { playingTrackIdFromState } from '$lib/utils/playingTrack.svelte';
 	import AdminTileMenu from './AdminTileMenu.svelte';
 	import ScrollRestore from './ScrollRestore.svelte';
+	import { IconRadio, IconPlay } from './icons';
 	import { authStore } from '$lib/stores/auth';
 	import { adminUploadArtistImage, adminDeleteArtistImage } from '$lib/api/admin';
 	import { artistImageBust, bumpArtistImageBust } from '$lib/stores/coverBust';
@@ -227,9 +228,7 @@
 					{/if}
 					{#if !imageLoaded || imageError}
 						<div class="absolute inset-0 flex items-center justify-center bg-gradient-to-br from-surface-raised to-border">
-							<svg class="text-text-muted h-16 w-16" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-								<path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M8.111 16.404a5.5 5.5 0 017.778 0M12 20h.01m-7.08-7.071c3.904-3.905 10.236-3.905 14.141 0M1.394 9.393c5.857-5.857 15.355-5.857 21.213 0" />
-							</svg>
+							<IconRadio class="text-text-muted h-16 w-16" />
 						</div>
 					{/if}
 					{#if $authStore?.isAdmin}
@@ -255,9 +254,7 @@
 					class="bg-accent hover:bg-accent/90 mt-4 flex w-full items-center justify-center gap-2 rounded-lg px-4 py-2.5 text-sm font-semibold text-white transition-colors"
 					onclick={resume}
 				>
-					<svg class="h-4 w-4" fill="currentColor" viewBox="0 0 24 24">
-						<path d="M8 5v14l11-7z" />
-					</svg>
+					<IconPlay class="h-4 w-4" />
 					{resumeLabel}
 				</button>
 			</div>
@@ -305,9 +302,7 @@
 											{/if}
 										</div>
 										{#if isHighlighted}
-											<svg class="text-yellow-900 h-3.5 w-3.5 flex-shrink-0" fill="currentColor" viewBox="0 0 24 24" aria-hidden="true">
-												<path d="M8 5v14l11-7z" />
-											</svg>
+											<IconPlay class="text-yellow-900 h-3.5 w-3.5 flex-shrink-0" aria-hidden="true" />
 										{/if}
 										<span class="flex-shrink-0 text-sm tabular-nums {isHighlighted ? 'text-yellow-900' : 'text-text-primary text-shadow-dark'}">
 											{formatDuration(episode.duration_seconds)}

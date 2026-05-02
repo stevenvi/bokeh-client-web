@@ -6,6 +6,7 @@
 	import { playingTrackIdFromState } from '$lib/utils/playingTrack.svelte';
 	import type { TrackView } from '$lib/types';
 	import ScrollRestore from './ScrollRestore.svelte';
+	import { IconMusic, IconPlay } from './icons';
 
 	interface Props {
 		albumId: number;
@@ -116,9 +117,7 @@
 					{/if}
 					{#if !coverLoaded || coverError}
 						<div class="absolute inset-0 flex items-center justify-center bg-gradient-to-br from-surface-raised to-border">
-							<svg class="text-text-muted h-16 w-16" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-								<path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M9 19V6l12-3v13M9 19c0 1.105-1.343 2-3 2s-3-.895-3-2 1.343-2 3-2 3 .895 3 2zm12-3c0 1.105-1.343 2-3 2s-3-.895-3-2 1.343-2 3-2 3 .895 3 2zM9 10l12-3" />
-							</svg>
+							<IconMusic class="text-text-muted h-16 w-16" />
 						</div>
 					{/if}
 				</div>
@@ -155,9 +154,7 @@
 									{/if}
 								</div>
 								{#if isPlaying}
-									<svg class="text-yellow-900 h-3.5 w-3.5 flex-shrink-0" fill="currentColor" viewBox="0 0 24 24" aria-hidden="true">
-										<path d="M8 5v14l11-7z" />
-									</svg>
+									<IconPlay class="text-yellow-900 h-3.5 w-3.5 flex-shrink-0" aria-hidden="true" />
 								{/if}
 								<span class="flex-shrink-0 text-sm tabular-nums {isPlaying ? 'text-yellow-900' : 'text-text-primary text-shadow-dark'}">
 									{formatDuration(track.duration_seconds)}

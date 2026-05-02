@@ -23,6 +23,20 @@
 	import PathBrowser from '$lib/components/PathBrowser.svelte';
 	import AdminCollectionMenu from '$lib/components/AdminCollectionMenu.svelte';
 	import { useRootBreadcrumb } from '$lib/utils/breadcrumb.svelte';
+	import {
+		IconPhoto,
+		IconMusic,
+		IconFilm,
+		IconFolderCollection,
+		IconTypePhoto,
+		IconTypeMovie,
+		IconTypeHomeMovie,
+		IconTypeMusic,
+		IconTypeRadioShow,
+		IconChevronDown,
+		IconEye,
+		IconEyeSlash
+	} from '$lib/components/icons';
 
 	const queryClient = useQueryClient();
 
@@ -355,21 +369,13 @@
 								{/if}
 									<div class="absolute inset-0 flex h-full w-full items-center justify-center bg-gradient-to-br from-surface-raised to-border transition-opacity duration-300" class:opacity-0={coverLoadedStates[coll.id] && !coverErrorStates[coll.id]}>
 										{#if coll.type === 'image:photo'}
-											<svg class="text-text-muted h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-												<path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M2.25 15.75l5.159-5.159a2.25 2.25 0 013.182 0l5.159 5.159m-1.5-1.5l1.409-1.409a2.25 2.25 0 013.182 0l2.909 2.909m-18 3.75h16.5a1.5 1.5 0 001.5-1.5V6a1.5 1.5 0 00-1.5-1.5H3.75A1.5 1.5 0 002.25 6v12a1.5 1.5 0 001.5 1.5zm10.5-11.25h.008v.008h-.008V8.25zm.375 0a.375.375 0 11-.75 0 .375.375 0 01.75 0z" />
-											</svg>
+											<IconPhoto class="text-text-muted h-6 w-6" />
 										{:else if coll.type.startsWith('audio:')}
-											<svg class="text-text-muted h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-												<path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M9 19V6l12-3v13M9 19c0 1.105-1.343 2-3 2s-3-.895-3-2 1.343-2 3-2 3 .895 3 2zm12-3c0 1.105-1.343 2-3 2s-3-.895-3-2 1.343-2 3-2 3 .895 3 2zM9 10l12-3" />
-											</svg>
+											<IconMusic class="text-text-muted h-6 w-6" />
 										{:else if coll.type === 'video:movie'}
-											<svg class="text-text-muted h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-												<path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M3.375 19.5h17.25m-17.25 0a1.125 1.125 0 01-1.125-1.125M3.375 19.5h1.5C5.496 19.5 6 18.996 6 18.375m-3.75.125V6.375m0 0A1.125 1.125 0 013.375 5.25h17.25a1.125 1.125 0 011.125 1.125M3.375 6.375v12m17.25-12v12a1.125 1.125 0 01-1.125 1.125M18 6.375v12" />
-											</svg>
+											<IconFilm class="text-text-muted h-6 w-6" />
 										{:else}
-											<svg class="text-text-muted h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-												<path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M2.25 12.75V12A2.25 2.25 0 014.5 9.75h15A2.25 2.25 0 0121.75 12v.75m-8.69-6.44l-2.12-2.12a1.5 1.5 0 00-1.061-.44H4.5A2.25 2.25 0 002.25 6v12a2.25 2.25 0 002.25 2.25h15A2.25 2.25 0 0021.75 18V9a2.25 2.25 0 00-2.25-2.25h-5.379a1.5 1.5 0 01-1.06-.44z" />
-											</svg>
+											<IconFolderCollection class="text-text-muted h-6 w-6" />
 										{/if}
 									</div>
 								</div>
@@ -527,46 +533,15 @@
 
 {#snippet typeIcon(type: string)}
 	{#if type === 'image:photo'}
-		<!-- Landscape photograph -->
-		<svg class="h-4 w-4 flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round">
-			<rect x="2" y="3" width="20" height="18" rx="2"/>
-			<circle cx="8.5" cy="9.5" r="1.5"/>
-			<path d="M3 17 l4-4 3 3 4-4.5 7 5.5"/>
-		</svg>
+		<IconTypePhoto class="h-4 w-4 flex-shrink-0" />
 	{:else if type === 'video:movie'}
-		<!-- Clapperboard -->
-		<svg class="h-4 w-4 flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round">
-			<rect x="3" y="4" width="18" height="4" rx="1"/>
-			<rect x="3" y="8" width="18" height="12" rx="1"/>
-			<line x1="7" y1="4" x2="6" y2="8"/>
-			<line x1="12" y1="4" x2="11" y2="8"/>
-			<line x1="17" y1="4" x2="16" y2="8"/>
-		</svg>
+		<IconTypeMovie class="h-4 w-4 flex-shrink-0" />
 	{:else if type === 'video:home_movie'}
-		<!-- Film reel -->
-		<svg class="h-4 w-4 flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round">
-			<circle cx="12" cy="12" r="9"/>
-			<circle cx="12" cy="12" r="3"/>
-			<line x1="12" y1="3" x2="12" y2="9"/>
-			<line x1="12" y1="15" x2="12" y2="21"/>
-			<line x1="3" y1="12" x2="9" y2="12"/>
-			<line x1="15" y1="12" x2="21" y2="12"/>
-		</svg>
+		<IconTypeHomeMovie class="h-4 w-4 flex-shrink-0" />
 	{:else if type === 'audio:music'}
-		<!-- Music notes -->
-		<svg class="h-4 w-4 flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round">
-			<path d="M9 18V5l12-2v13"/>
-			<circle cx="6" cy="18" r="3"/>
-			<circle cx="18" cy="16" r="3"/>
-		</svg>
+		<IconTypeMusic class="h-4 w-4 flex-shrink-0" />
 	{:else if type === 'audio:show'}
-		<!-- Radio tower with signal arcs -->
-		<svg class="h-4 w-4 flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round">
-			<line x1="12" y1="2" x2="12" y2="13"/>
-			<path d="M9 22 L12 13 L15 22"/>
-			<path d="M8.5 9 Q12 5.5 15.5 9"/>
-			<path d="M5.5 6.5 Q12 1 18.5 6.5"/>
-		</svg>
+		<IconTypeRadioShow class="h-4 w-4 flex-shrink-0" />
 	{/if}
 {/snippet}
 
@@ -599,9 +574,7 @@
 						>
 							{@render typeIcon(newCollType)}
 							<span class="flex-1 text-sm">{collTypeLabel(newCollType)}</span>
-							<svg class="text-text-muted h-4 w-4 flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-								<path d="M19.5 8.25l-7.5 7.5-7.5-7.5" />
-							</svg>
+							<IconChevronDown class="text-text-muted h-4 w-4 flex-shrink-0" />
 						</button>
 						{#if typeDropdownOpen}
 							<div class="fixed inset-0 z-[9]" onclick={() => (typeDropdownOpen = false)}></div>
@@ -771,16 +744,9 @@
 							onclick={() => (changePasswordShowNew = !changePasswordShowNew)}
 						>
 							{#if changePasswordShowNew}
-								<!-- eye open -->
-								<svg class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round">
-									<path d="M2.036 12.322a1.012 1.012 0 010-.644C3.423 7.51 7.36 4.5 12 4.5c4.638 0 8.573 3.007 9.963 7.178.07.207.07.431 0 .644C20.577 16.49 16.64 19.5 12 19.5c-4.638 0-8.573-3.007-9.963-7.178z"/>
-									<circle cx="12" cy="12" r="3"/>
-								</svg>
+								<IconEye class="h-5 w-5" />
 							{:else}
-								<!-- eye with slash -->
-								<svg class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round">
-									<path d="M3.98 8.223A10.477 10.477 0 001.934 12C3.226 16.338 7.244 19.5 12 19.5c.993 0 1.953-.138 2.863-.395M6.228 6.228A10.451 10.451 0 0112 4.5c4.756 0 8.773 3.162 10.065 7.498a10.522 10.522 0 01-4.293 5.774M6.228 6.228L3 3m3.228 3.228l3.65 3.65m7.894 7.894L21 21m-3.228-3.228l-3.65-3.65m0 0a3 3 0 10-4.243-4.243m4.243 4.243L9.88 9.88"/>
-								</svg>
+								<IconEyeSlash class="h-5 w-5" />
 							{/if}
 						</button>
 					</div>
@@ -811,14 +777,9 @@
 							onclick={() => (changePasswordShowConfirm = !changePasswordShowConfirm)}
 						>
 							{#if changePasswordShowConfirm}
-								<svg class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round">
-									<path d="M2.036 12.322a1.012 1.012 0 010-.644C3.423 7.51 7.36 4.5 12 4.5c4.638 0 8.573 3.007 9.963 7.178.07.207.07.431 0 .644C20.577 16.49 16.64 19.5 12 19.5c-4.638 0-8.573-3.007-9.963-7.178z"/>
-									<circle cx="12" cy="12" r="3"/>
-								</svg>
+								<IconEye class="h-5 w-5" />
 							{:else}
-								<svg class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round">
-									<path d="M3.98 8.223A10.477 10.477 0 001.934 12C3.226 16.338 7.244 19.5 12 19.5c.993 0 1.953-.138 2.863-.395M6.228 6.228A10.451 10.451 0 0112 4.5c4.756 0 8.773 3.162 10.065 7.498a10.522 10.522 0 01-4.293 5.774M6.228 6.228L3 3m3.228 3.228l3.65 3.65m7.894 7.894L21 21m-3.228-3.228l-3.65-3.65m0 0a3 3 0 10-4.243-4.243m4.243 4.243L9.88 9.88"/>
-								</svg>
+								<IconEyeSlash class="h-5 w-5" />
 							{/if}
 						</button>
 					</div>

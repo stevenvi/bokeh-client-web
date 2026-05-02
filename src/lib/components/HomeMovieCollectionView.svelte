@@ -9,6 +9,7 @@
 	import AdminTileMenu from './AdminTileMenu.svelte';
 	import ScrollRestore from './ScrollRestore.svelte';
 	import VideoTile from './VideoTile.svelte';
+	import { IconFolder } from './icons';
 	import { authStore } from '$lib/stores/auth';
 	import { adminCreateJob, adminUploadCollectionCover, adminUploadVideoCover } from '$lib/api/admin';
 	import { coverBustStore, bumpCoverBust, bumpVideoCoverBust } from '$lib/stores/coverBust';
@@ -87,9 +88,7 @@
 							>
 								<div class="relative w-full overflow-hidden rounded-lg bg-surface-raised" style="aspect-ratio: 4/3">
 									<div class="absolute inset-0 flex items-center justify-center pointer-events-none">
-										<svg class="text-text-muted h-10 w-10 opacity-30" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-											<path stroke-linecap="round" stroke-linejoin="round" stroke-width="1" d="M3 7v10a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2h-6l-2-2H5a2 2 0 00-2 2z" />
-										</svg>
+										<IconFolder class="text-text-muted h-10 w-10 opacity-30" />
 									</div>
 									{#key $coverBustStore[col.id]}
 										<img

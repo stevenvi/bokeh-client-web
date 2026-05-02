@@ -1,4 +1,6 @@
 <script lang="ts">
+	import { IconPlay, IconPauseOutline } from './icons';
+
 	let {
 		playing,
 		feedbackKey,
@@ -11,13 +13,9 @@
 		<div class="play-feedback pointer-events-none flex items-center justify-center {klass}">
 			<div class="play-feedback-icon rounded-full bg-black/50 p-6">
 				{#if playing}
-					<svg class="h-16 w-16 text-white" fill="currentColor" viewBox="0 0 24 24">
-						<path d="M8 5v14l11-7z" />
-					</svg>
+					<IconPlay class="h-16 w-16 text-white" />
 				{:else}
-					<svg class="h-16 w-16 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-						<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15.75 5.25v13.5m-7.5-13.5v13.5" />
-					</svg>
+					<IconPauseOutline class="h-16 w-16 text-white" />
 				{/if}
 			</div>
 		</div>

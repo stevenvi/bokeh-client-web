@@ -1,5 +1,6 @@
 <script lang="ts">
 	import { toastStore } from '$lib/stores/toast';
+	import { IconSpinner, IconThreeDots } from './icons';
 
 	export interface AdminMenuItem {
 		emoji: string;
@@ -45,16 +46,9 @@
 		aria-label="More options"
 	>
 		{#if loading}
-			<svg class="h-3 w-3 animate-spin" viewBox="0 0 24 24" fill="none">
-				<circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
-				<path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"></path>
-			</svg>
+			<IconSpinner class="h-3 w-3 animate-spin" />
 		{:else}
-			<svg class="h-3 w-3" viewBox="0 0 16 4" fill="currentColor">
-				<circle cx="2" cy="2" r="1.5"></circle>
-				<circle cx="8" cy="2" r="1.5"></circle>
-				<circle cx="14" cy="2" r="1.5"></circle>
-			</svg>
+			<IconThreeDots class="h-3 w-3" />
 		{/if}
 	</button>
 

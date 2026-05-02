@@ -1,5 +1,6 @@
 <script lang="ts">
 	import { artistImageUrl } from '$lib/api/music';
+	import { IconRadio, IconPlay } from './icons';
 
 	interface Props {
 		showId: number;
@@ -47,10 +48,7 @@
 			class="absolute inset-0 flex h-full w-full items-center justify-center bg-gradient-to-br from-surface-raised to-border transition-opacity duration-300"
 			class:opacity-0={imageLoaded && !imageError}
 		>
-			<!-- Radio wave icon for shows -->
-			<svg class="text-text-muted h-12 w-12" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-				<path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M8.111 16.404a5.5 5.5 0 017.778 0M12 20h.01m-7.08-7.071c3.904-3.905 10.236-3.905 14.141 0M1.394 9.393c5.857-5.857 15.355-5.857 21.213 0" />
-			</svg>
+			<IconRadio class="text-text-muted h-12 w-12" />
 		</div>
 		{#if hovered}
 			<div class="absolute inset-0 flex items-center justify-center bg-black/30 transition-opacity">
@@ -59,9 +57,7 @@
 					onclick={(e) => { e.stopPropagation(); onClickTitle?.(); }}
 					aria-label="Open show"
 				>
-					<svg class="ml-1 h-7 w-7 text-black" fill="currentColor" viewBox="0 0 24 24">
-						<path d="M8 5v14l11-7z" />
-					</svg>
+					<IconPlay class="ml-1 h-7 w-7 text-black" />
 				</button>
 			</div>
 		{/if}
