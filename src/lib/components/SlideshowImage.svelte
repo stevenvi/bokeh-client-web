@@ -8,13 +8,16 @@
 		item: PhotoItem;
 		active: boolean;
 		zoomed?: boolean;
-		onZoom?: () => void;
+		// Multiple of fit zoom that OSD should animate to on entry. 1 = fit
+		// (default; used for pinch/wheel where the user's gesture already
+		// provides motion). >1 gives an explicit zoom-in animation.
+		initialZoomScale?: number;
 		onZoomExit?: () => void;
 	}
 
 	const maxZoomLevel = 2;
 
-	let { item, active, zoomed = false, onZoom, onZoomExit }: Props = $props();
+	let { item, active, zoomed = false, initialZoomScale = 1, onZoomExit }: Props = $props();
 
 	// Track which item id has fired onload so we can remember it without an effect.
 	// Using $derived.by (part of the reactive graph) ensures fullLoaded is always
@@ -61,9 +64,11 @@
 		}
 	});
 
-	// Parent can request exit zoom via the zoomed prop
+	// Parent owns zoom state. Drive DZI lifecycle off the `zoomed` prop.
 	$effect(() => {
-		if (!zoomed && showDzi) {
+		if (zoomed && !showDzi) {
+			initDzi();
+		} else if (!zoomed && showDzi) {
 			exitDzi();
 		}
 	});
@@ -76,7 +81,6 @@
 		if (!dziContainer || showDzi) return;
 		showDzi = true;
 		dziLoading = true;
-		onZoom?.();
 		requestAnimationFrame(() => {
 			if (!dziContainer) return;
 			// Timestamp viewer construction so we can suppress auto-exit during the
@@ -136,11 +140,23 @@
 			// type:'image' sources across OSD versions; 'update-viewport' fires
 			// on every render and is a reliable backup. Whichever fires first
 			// wins; the flag prevents repeat work.
+			//
+			// Tap-driven entries (initialZoomScale > 1) animate from fit to the
+			// target zoom — but only AFTER the canvas has painted at least one
+			// frame at fit. By waiting for the first render and deferring one
+			// more frame, the animation is guaranteed to start visibly at fit.
 			let osdHasRendered = false;
 			const markOsdRendered = () => {
 				if (osdHasRendered) return;
 				osdHasRendered = true;
 				osdReady = true;
+				if (initialZoomScale > 1) {
+					requestAnimationFrame(() => {
+						if (!viewer) return;
+						const target = viewer.viewport.getMinZoom() * initialZoomScale;
+						viewer.viewport.zoomTo(target, undefined, false);
+					});
+				}
 			};
 			viewer.addHandler('tile-drawn', markOsdRendered);
 			viewer.addHandler('update-viewport', markOsdRendered);
@@ -179,21 +195,6 @@
 				}
 			});
 		});
-	}
-
-	function handleDoubleClick() {
-		initDzi();
-	}
-
-	function handleWheel(e: WheelEvent) {
-		// Ctrl+scroll or plain scroll wheel triggers DZI zoom on desktop
-		if (!showDzi && (e.ctrlKey || Math.abs(e.deltaY) > 0)) {
-			if (e.deltaY < 0) {
-				// Zoom in
-				e.preventDefault();
-				initDzi();
-			}
-		}
 	}
 
 	function isViewerAtHome(v: OpenSeadragon.Viewer): boolean {
@@ -242,69 +243,9 @@
 		dziLoading = false;
 	}
 
-	// Touch gesture detection (pinch to enter zoom, double-tap to enter/exit zoom)
-	let touches: Touch[] = [];
-	let initialPinchDist = 0;
-	let lastTapTime = 0;
-	let lastTapX = 0;
-	let lastTapY = 0;
-
-	function onTouchStart(e: TouchEvent) {
-		touches = Array.from(e.touches);
-		if (touches.length === 2) {
-			const dx = touches[0].clientX - touches[1].clientX;
-			const dy = touches[0].clientY - touches[1].clientY;
-			initialPinchDist = Math.hypot(dx, dy);
-		}
-	}
-
-	function onTouchMove(e: TouchEvent) {
-		if (e.touches.length === 2) {
-			// Prevent browser native pinch-to-zoom from hijacking the gesture.
-			e.preventDefault();
-			if (initialPinchDist > 0 && !showDzi) {
-				const dx = e.touches[0].clientX - e.touches[1].clientX;
-				const dy = e.touches[0].clientY - e.touches[1].clientY;
-				const dist = Math.hypot(dx, dy);
-				if (dist / initialPinchDist > 1.2) {
-					initDzi();
-				}
-			}
-		}
-	}
-
-	function onTouchEnd(e: TouchEvent) {
-		// Only act on single-finger lifts that end all touches
-		if (e.changedTouches.length !== 1 || e.touches.length !== 0) return;
-		const touch = e.changedTouches[0];
-		const now = Date.now();
-		const dist = Math.hypot(touch.clientX - lastTapX, touch.clientY - lastTapY);
-		if (now - lastTapTime < 300 && dist < 50) {
-			// Double tap: enter zoom if not showing, exit if showing
-			if (showDzi) {
-				exitDzi();
-			} else {
-				initDzi();
-			}
-			lastTapTime = 0; // reset so triple-tap doesn't re-trigger
-		} else {
-			lastTapTime = now;
-			lastTapX = touch.clientX;
-			lastTapY = touch.clientY;
-		}
-	}
 </script>
 
-<!-- svelte-ignore a11y_no_static_element_interactions -->
-<div
-	class="relative h-full w-full touch-none"
-	ondblclick={handleDoubleClick}
-	onwheel={handleWheel}
-	ontouchstart={onTouchStart}
-	ontouchmove={onTouchMove}
-	ontouchend={onTouchEnd}
-	role="presentation"
->
+<div class="relative h-full w-full">
 	<!-- Thumb stand-in: shown while full image loads, only if already in browser
 	     cache. Hidden entirely while DZI is up. -->
 	{#if thumbCached && !showDzi}

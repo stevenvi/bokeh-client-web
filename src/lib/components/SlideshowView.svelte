@@ -77,6 +77,13 @@
 	let swipeAxis = $state<'horizontal' | 'vertical' | null>(null);
 	const AXIS_LOCK_PX = 8;
 
+	// Pinch state (centralized here so the touch target — this root div — never
+	// gets unmounted mid-gesture). Double-tap detection lives in handleTap and
+	// piggybacks on the browser's click events (which fire for both mouse and
+	// touch), so it doesn't need its own touch-level state.
+	let initialPinchDist = 0;
+	let pinchActive = false;
+
 	// Dismiss-gesture state (vertical drag-down to go up a level)
 	let dismissOffsetY = $state(0);
 	let dismissOriginY = $state(0); // CSS transform-origin Y so photo shrinks toward the touch point
@@ -101,8 +108,20 @@
 
 	let zoomed = $state(false);
 	let justExitedZoom = $state(false);
+	let initialZoomScale = $state(1);
+
+	// Entering zoom always pauses autoplay so the photo doesn't slide out from
+	// under the user.
+	$effect(() => {
+		if (zoomed) playing = false;
+	});
 	let overlayHideTimer: ReturnType<typeof setTimeout> | null = null;
 	let playTimer: ReturnType<typeof setInterval> | null = null;
+	// Deferred-tap timer: the first click of a double-click/double-tap is held
+	// briefly so a second click within the window can cancel it and enter zoom
+	// instead. Without this, the first tap of a double-tap would toggle play.
+	let pendingTapTimer: ReturnType<typeof setTimeout> | null = null;
+	const DOUBLE_TAP_MS = 200;
 
 	// Play/pause feedback: a brief centered icon flash on toggle.
 	// feedbackKey increments on each toggle so the element re-mounts and replays the animation.
@@ -169,6 +188,7 @@
 		if (playTimer) clearInterval(playTimer);
 		if (overlayHideTimer) clearTimeout(overlayHideTimer);
 		if (safetyTimer) clearTimeout(safetyTimer);
+		if (pendingTapTimer) clearTimeout(pendingTapTimer);
 	});
 
 	async function loadInitial() {
@@ -420,13 +440,30 @@
 
 	function handleTap() {
 		if (zoomed || justExitedZoom) return;
-		handleTogglePlay();
-		showOverlay = true;
-		scheduleOverlayHide();
+		// Second click within the double-tap window: cancel the deferred toggle
+		// and treat the pair as a zoom request. Works uniformly for mouse
+		// double-click and touch double-tap since both fire `click` events.
+		if (pendingTapTimer !== null) {
+			clearTimeout(pendingTapTimer);
+			pendingTapTimer = null;
+			initialZoomScale = 2;
+			zoomed = true;
+			return;
+		}
+		pendingTapTimer = setTimeout(() => {
+			pendingTapTimer = null;
+			if (zoomed || justExitedZoom) return;
+			handleTogglePlay();
+			showOverlay = true;
+			scheduleOverlayHide();
+		}, DOUBLE_TAP_MS);
 	}
 
 	function handleZoomExit() {
 		zoomed = false;
+		// Reset entry-zoom hint so the next zoom entry (which may come via a
+		// non-double-tap path) starts at fit.
+		initialZoomScale = 1;
 		// Show the overlay briefly on zoom exit so the user regains orientation
 		showOverlay = true;
 		scheduleOverlayHide();
@@ -440,7 +477,21 @@
 
 	// Swipe handling
 	function onTouchStart(e: TouchEvent) {
-		if (e.touches.length !== 1 || transitioning || zoomed || dismissCommitted) return;
+		if (transitioning || dismissCommitted) return;
+
+		// Two-finger touch: record baseline for pinch-out → zoom detection.
+		// While zoomed, OSD owns the gesture and we stay out of the way.
+		if (e.touches.length === 2) {
+			if (zoomed) return;
+			const dx = e.touches[0].clientX - e.touches[1].clientX;
+			const dy = e.touches[0].clientY - e.touches[1].clientY;
+			initialPinchDist = Math.hypot(dx, dy);
+			pinchActive = true;
+			swiping = false;
+			return;
+		}
+
+		if (e.touches.length !== 1 || zoomed) return;
 		swipeStartX = e.touches[0].clientX;
 		swipeStartY = e.touches[0].clientY;
 		swipeAxis = null;
@@ -453,6 +504,19 @@
 	}
 
 	function onTouchMove(e: TouchEvent) {
+		// Two-finger pinch-out → enter zoom. Once triggered, OSD takes over.
+		if (e.touches.length === 2 && initialPinchDist > 0 && !zoomed) {
+			e.preventDefault();
+			const px = e.touches[0].clientX - e.touches[1].clientX;
+			const py = e.touches[0].clientY - e.touches[1].clientY;
+			const dist = Math.hypot(px, py);
+			if (dist / initialPinchDist > 1.2) {
+				initialPinchDist = 0;
+				zoomed = true;
+			}
+			return;
+		}
+
 		if (!swiping || e.touches.length !== 1) return;
 		const dx = e.touches[0].clientX - swipeStartX;
 		const dy = e.touches[0].clientY - swipeStartY;
@@ -485,7 +549,14 @@
 		slideOffsetPx = adx;
 	}
 
-	async function onTouchEnd() {
+	async function onTouchEnd(e: TouchEvent) {
+		// Reset pinch tracking once all fingers are lifted. Double-tap is
+		// detected via the synthesized click events (see handleTap), not here.
+		if (e.touches.length === 0) {
+			initialPinchDist = 0;
+			pinchActive = false;
+		}
+
 		if (!swiping) return;
 		const axis = swipeAxis;
 		swiping = false;
@@ -570,6 +641,15 @@
 		}, 220);
 	}
 
+	// Desktop scroll-wheel up → enter zoom. Once zoomed, OSD owns the wheel.
+	function onWheel(e: WheelEvent) {
+		if (zoomed) return;
+		if (e.deltaY < 0) {
+			e.preventDefault();
+			zoomed = true;
+		}
+	}
+
 	// Keyboard navigation
 	function onKeyDown(e: KeyboardEvent) {
 		if (e.key === 'ArrowLeft') {
@@ -592,6 +672,7 @@
 <div
 	class="fixed inset-0 z-50 touch-none overflow-hidden"
 	onclick={handleTap}
+	onwheel={onWheel}
 	onmousemove={handleInteraction}
 	ontouchstart={onTouchStart}
 	ontouchmove={onTouchMove}
@@ -640,19 +721,28 @@
 				</div>
 			{/each}
 
-			<!-- SlideshowImage overlay: provides DZI deep-zoom, only mounted when at rest.
-			     The plain img underneath is identical, so mount/unmount is seamless. -->
-			{#if !transitioning && !swiping}
-				<div class="absolute inset-0 z-10">
-					<SlideshowImage
-						item={currentItem}
-						active={true}
-						{zoomed}
-						onZoom={() => (zoomed = true)}
-						onZoomExit={handleZoomExit}
-					/>
-				</div>
-			{/if}
+			<!-- SlideshowImage overlay: provides DZI deep-zoom. Stays mounted at all
+			     times so the gesture target on the parent is never destroyed mid-
+			     touch.
+			     - pointer-events-none while not zoomed: gestures pass through to
+			       the parent's handlers. Toggles to auto when zoomed so OSD owns
+			       the canvas.
+			     - invisible during swipe/transition: visibleSlides beneath show
+			       the motion instead. The underlying <img> is identical, so the
+			       hide/show flip is visually seamless. -->
+			<div
+				class="absolute inset-0 z-10"
+				class:pointer-events-none={!zoomed}
+				class:invisible={(swiping || transitioning) && !zoomed}
+			>
+				<SlideshowImage
+					item={currentItem}
+					active={true}
+					{zoomed}
+					{initialZoomScale}
+					onZoomExit={handleZoomExit}
+				/>
+			</div>
 		</div>
 
 		<!-- Play/pause feedback flash -->
