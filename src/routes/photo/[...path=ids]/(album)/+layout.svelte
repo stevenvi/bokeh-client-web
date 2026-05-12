@@ -1,11 +1,12 @@
 <script lang="ts">
 	import { page } from '$app/state';
 	import { goto } from '$app/navigation';
-	import { onDestroy } from 'svelte';
 	import { toolbarStore } from '$lib/stores/toolbar';
 	import { parseCollectionIds, loadCollectionChain, applyBreadcrumbs } from '$lib/utils/collectionPath';
 	import AlbumGridView from '$lib/components/AlbumGridView.svelte';
 	import type { CollectionView } from '$lib/types';
+
+	let { children } = $props();
 
 	const pathParam = $derived(page.params.path ?? '');
 	const basePath = $derived('/photo/' + pathParam);
@@ -59,10 +60,6 @@
 	});
 </script>
 
-<svelte:head>
-	<title>{leafCollection?.name ?? 'Photos'} — Bokeh</title>
-</svelte:head>
-
 <main>
 	{#if loadState === 'loading'}
 		<div class="flex h-48 items-center justify-center">
@@ -74,7 +71,9 @@
 		<AlbumGridView
 			collectionId={leafCollection.id}
 			collectionName={leafCollection.name}
-			basePath={basePath}
+			{basePath}
 		/>
 	{/if}
 </main>
+
+{@render children?.()}

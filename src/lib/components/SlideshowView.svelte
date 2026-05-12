@@ -70,7 +70,34 @@
 
 	// Swipe state
 	let swipeStartX = 0;
+	let swipeStartY = 0;
 	let swiping = $state(false);
+	// null until first significant movement decides which axis the gesture follows.
+	// Horizontal => paginate prev/next. Vertical (downward only) => dismiss to parent.
+	let swipeAxis = $state<'horizontal' | 'vertical' | null>(null);
+	const AXIS_LOCK_PX = 8;
+
+	// Dismiss-gesture state (vertical drag-down to go up a level)
+	let dismissOffsetY = $state(0);
+	let dismissOriginY = $state(0); // CSS transform-origin Y so photo shrinks toward the touch point
+	let dismissAnimated = $state(false);
+	let dismissCommitted = $state(false); // once committed, animation plays out and then we navigate
+
+	// Long-edge of the viewport that dismissOffsetY animates toward when committing.
+	// Cached at gesture start so we don't read window during reactive derivations.
+	let viewportH = $state(typeof window === 'undefined' ? 1 : window.innerHeight);
+
+	const dismissProgress = $derived(
+		viewportH > 0 ? Math.min(1, Math.max(0, dismissOffsetY) / viewportH) : 0
+	);
+	// Photo shrinks to 60% at full drag — matches iPhone Photos feel.
+	const dismissScale = $derived(1 - dismissProgress * 0.4);
+	// Black backdrop fully fades by ~half-screen drag, revealing the parent view.
+	const bgOpacity = $derived(
+		swipeAxis === 'vertical' || dismissCommitted
+			? Math.max(0, 1 - dismissProgress * 2)
+			: 1
+	);
 
 	let zoomed = $state(false);
 	let justExitedZoom = $state(false);
@@ -413,27 +440,62 @@
 
 	// Swipe handling
 	function onTouchStart(e: TouchEvent) {
-		if (e.touches.length !== 1 || transitioning || zoomed) return;
+		if (e.touches.length !== 1 || transitioning || zoomed || dismissCommitted) return;
 		swipeStartX = e.touches[0].clientX;
+		swipeStartY = e.touches[0].clientY;
+		swipeAxis = null;
 		slideOffsetPx = 0;
+		dismissOffsetY = 0;
+		dismissOriginY = swipeStartY;
+		dismissAnimated = false;
+		viewportH = window.innerHeight;
 		swiping = true;
 	}
 
 	function onTouchMove(e: TouchEvent) {
 		if (!swiping || e.touches.length !== 1) return;
-		let dx = e.touches[0].clientX - swipeStartX;
-		if (dx > 0 && !hasPrev) {
-			dx *= 0.2;
+		const dx = e.touches[0].clientX - swipeStartX;
+		const dy = e.touches[0].clientY - swipeStartY;
+
+		// First-pass axis lock: whichever axis crosses the threshold first owns
+		// the gesture. Upward drags (dy < 0) are ignored — we only dismiss on
+		// downward motion. If horizontal wins, vertical is suppressed for this
+		// gesture, and vice versa.
+		if (swipeAxis === null) {
+			if (Math.abs(dx) > AXIS_LOCK_PX && Math.abs(dx) >= Math.abs(dy)) {
+				swipeAxis = 'horizontal';
+			} else if (dy > AXIS_LOCK_PX && dy > Math.abs(dx)) {
+				swipeAxis = 'vertical';
+			} else {
+				return;
+			}
 		}
-		if (dx < 0 && !hasNext) {
-			dx *= 0.2;
+
+		if (swipeAxis === 'vertical') {
+			// Negative dy (finger moves back up past the start) clamps to 0 so
+			// the photo doesn't get pushed off the top — feels like rubber-band.
+			dismissOffsetY = Math.max(0, dy);
+			return;
 		}
-		slideOffsetPx = dx;
+
+		// Horizontal
+		let adx = dx;
+		if (adx > 0 && !hasPrev) adx *= 0.2;
+		if (adx < 0 && !hasNext) adx *= 0.2;
+		slideOffsetPx = adx;
 	}
 
 	async function onTouchEnd() {
 		if (!swiping) return;
+		const axis = swipeAxis;
 		swiping = false;
+		swipeAxis = null;
+
+		if (axis === 'vertical') {
+			await finishDismissGesture();
+			return;
+		}
+
 		const dx = slideOffsetPx;
 
 		// Negligible movement — treat as tap, not swipe
@@ -481,6 +543,33 @@
 		// transitionend handles cleanup (slideOffsetPx === 0 path)
 	}
 
+	// Dismiss-gesture release: either commit (navigate up a level) or snap back.
+	async function finishDismissGesture() {
+		const dy = dismissOffsetY;
+		// Commit when finger has crossed ~15% of viewport height — same feel as
+		// horizontal pagination's 20% threshold but a bit easier since dismissal
+		// is the destructive direction.
+		const threshold = viewportH * 0.15;
+		if (dy > threshold) {
+			dismissCommitted = true;
+			dismissAnimated = true;
+			// Animate the rest of the way down, then navigate. By the time
+			// handleBack() fires, bgOpacity is already 0 so the parent view
+			// is fully visible underneath.
+			dismissOffsetY = viewportH;
+			window.setTimeout(() => {
+				handleBack();
+			}, 220);
+			return;
+		}
+		// Snap back to identity transform
+		dismissAnimated = true;
+		dismissOffsetY = 0;
+		window.setTimeout(() => {
+			dismissAnimated = false;
+		}, 220);
+	}
+
 	// Keyboard navigation
 	function onKeyDown(e: KeyboardEvent) {
 		if (e.key === 'ArrowLeft') {
@@ -501,7 +590,7 @@
 
 <!-- svelte-ignore a11y_no_static_element_interactions -->
 <div
-	class="fixed inset-0 z-50 overflow-hidden bg-black"
+	class="fixed inset-0 z-50 touch-none overflow-hidden"
 	onclick={handleTap}
 	onmousemove={handleInteraction}
 	ontouchstart={onTouchStart}
@@ -509,6 +598,23 @@
 	ontouchend={onTouchEnd}
 	role="presentation"
 >
+	<!-- Black backdrop sits behind everything. Fades out during dismiss so the
+	     parent view (rendered behind this fixed overlay) shows through. -->
+	<div
+		class="absolute inset-0 bg-black"
+		class:dismiss-animated={dismissAnimated}
+		style="opacity: {bgOpacity}"
+	></div>
+
+	<!-- Inner content wrapper handles the dismiss transform. transform-origin
+	     follows the touch start point so the photo shrinks toward the finger.
+	     overflow-hidden clips the prev/next slides at the wrapper edge so they
+	     don't pull into view as the wrapper scales down during dismissal. -->
+	<div
+		class="absolute inset-0 overflow-hidden"
+		class:dismiss-animated={dismissAnimated}
+		style="transform: translate3d(0, {dismissOffsetY}px, 0) scale({dismissScale}); transform-origin: 50% {dismissOriginY}px;"
+	>
 	{#if !currentItem}
 		<div class="flex h-full items-center justify-center">
 			<div class="border-accent h-10 w-10 animate-spin rounded-full border-2 border-t-transparent"></div>
@@ -552,7 +658,7 @@
 		<!-- Play/pause feedback flash -->
 		<PlayPauseFeedback playing={feedbackPlaying} {feedbackKey} />
 
-		{#if showOverlay && !zoomed}
+		{#if showOverlay && !zoomed && swipeAxis !== 'vertical' && !dismissCommitted}
 			<SlideshowOverlay
 				item={currentItem}
 				collectionName={currentItem.collection_name ?? collectionName}
@@ -566,11 +672,18 @@
 			/>
 		{/if}
 	{/if}
+	</div>
 </div>
 
 <style>
 	.slide-animated {
 		transition: transform 250ms var(--easing, ease-out);
+	}
+
+	.dismiss-animated {
+		transition:
+			transform 220ms ease-out,
+			opacity 220ms ease-out;
 	}
 
 	.slide-img {

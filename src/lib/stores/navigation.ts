@@ -107,6 +107,20 @@ function createNavigationStore() {
 			});
 		},
 
+		/**
+		 * Remove the leaf entry if (and only if) it is hidden and its path matches.
+		 * Used by overlay routes (e.g. slideshow) to clean up their hidden anchor
+		 * entry on unmount, so subsequent goBack() calls don't try to navigate to
+		 * the page the user is already on.
+		 */
+		popLeafIfHidden(path: string) {
+			update((crumbs) => {
+				const leaf = crumbs[crumbs.length - 1];
+				if (!leaf || !leaf.hidden || leaf.path !== path) return crumbs;
+				return crumbs.slice(0, -1);
+			});
+		},
+
 		reset() {
 			set([]);
 		},

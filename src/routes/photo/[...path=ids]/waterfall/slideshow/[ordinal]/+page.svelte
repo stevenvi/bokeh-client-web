@@ -1,5 +1,6 @@
 <script lang="ts">
 	import { page } from '$app/state';
+	import { replaceState } from '$app/navigation';
 	import SlideshowPage from '$lib/components/SlideshowPage.svelte';
 
 	const pathParam = $derived(page.params.path ?? '');
@@ -15,5 +16,5 @@
 	extraBreadcrumbs={[{ id: 0, name: 'Waterfall', path: waterfallPath }]}
 	order="desc"
 	recursive={true}
-	onOrdinalChange={(ordinal) => history.replaceState({ ...history.state }, '', waterfallPath + '/slideshow/' + (ordinal + 1))}
+	onOrdinalChange={(ordinal) => replaceState(waterfallPath + '/slideshow/' + (ordinal + 1), {})}
 />

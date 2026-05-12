@@ -1,5 +1,6 @@
 <script lang="ts">
 	import { parseCollectionIds, loadCollectionChain, applyBreadcrumbs } from '$lib/utils/collectionPath';
+	import { navigationStore } from '$lib/stores/navigation';
 	import SlideshowView from '$lib/components/SlideshowView.svelte';
 
 	interface Props {
@@ -37,6 +38,9 @@
 
 		loadState = 'loading';
 		let cancelled = false;
+		// Captured when we push the hidden breadcrumb so we can pop precisely
+		// that entry on unmount, regardless of any ordinal-driven URL changes.
+		let pushedSlideshowPath: string | null = null;
 
 		loadCollectionChain(ids).then((collections) => {
 			if (cancelled) return;
@@ -56,12 +60,23 @@
 				...extraBreadcrumbs,
 				{ id: leaf.id, name: 'Slideshow', path: slideshowPath, hidden: true }
 			]);
+			pushedSlideshowPath = slideshowPath;
 			collectionId = leaf.id;
 			collectionName = leaf.name;
 			loadState = 'loaded';
 		});
 
-		return () => { cancelled = true; };
+		return () => {
+			cancelled = true;
+			// On unmount (or path change), remove the hidden Slideshow anchor we
+			// pushed. Without this, the parent layout doesn't re-run its
+			// breadcrumb effect (pathParam didn't change), so the stale hidden
+			// entry would remain and break goBack() — it'd try to navigate to
+			// the page the user is already on.
+			if (pushedSlideshowPath) {
+				navigationStore.popLeafIfHidden(pushedSlideshowPath);
+			}
+		};
 	});
 </script>
 

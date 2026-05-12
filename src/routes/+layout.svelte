@@ -47,9 +47,14 @@
 	// Key for page fade transitions. Keyed on route + stable path params so that
 	// in-page URL updates (e.g. slideshow ordinal changes) don't remount the page.
 	// itemId is included so navigating between different videos still remounts.
-	const routeKey = $derived(
-		(page.route.id ?? '') + '|' + (page.params.path ?? '') + '|' + (page.params.itemId ?? '')
-	);
+	//
+	// Slideshow routes are treated as part of their parent page: navigating
+	// album↔slideshow (or waterfall↔slideshow) must NOT remount, so the parent
+	// view's DOM persists underneath the slideshow overlay.
+	const routeKey = $derived.by(() => {
+		const id = (page.route.id ?? '').replace(/\/slideshow\/\[ordinal\]$/, '');
+		return id + '|' + (page.params.path ?? '') + '|' + (page.params.itemId ?? '');
+	});
 
 	const queryClient = new QueryClient({
 		defaultOptions: {
