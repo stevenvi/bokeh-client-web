@@ -11,6 +11,7 @@
 
 	let { label = '', delayFrames = 0 }: Props = $props();
 
+	// svelte-ignore state_referenced_locally
 	let visible = $state(delayFrames === 0);
 	let cancelled = false;
 

@@ -40,6 +40,7 @@
 	}: Props = $props();
 
 	// Read from store on mount (skipped when items are provided externally)
+	// svelte-ignore state_referenced_locally
 	const store = externalItems == null ? get(slideshowStore) : null;
 	// svelte-ignore state_referenced_locally -- intentional initial-value fork; these don't change after mount
 	let items = $state<PhotoItem[]>(externalItems ?? store?.items ?? []);
@@ -253,7 +254,7 @@
 	async function loadInitial() {
 		// Fetch starting near the requested ordinal so it lands in the first page.
 		const startOffset = startOrdinal != null ? Math.max(0, startOrdinal - 10) : 0;
-		const page = await listPhotos(collectionId, {
+		const page = await listPhotos(collectionId!, {
 			sortOrder: storeParams.sortOrder,
 			recursive: storeParams.recursive,
 			offset: startOffset,
@@ -276,7 +277,7 @@
 		if (direction === 'forward') {
 			const lastOrdinal = items.at(-1)?.ordinal ?? -1;
 			if (total > 0 && lastOrdinal >= total - 1) return;
-			const page = await listPhotos(collectionId, {
+			const page = await listPhotos(collectionId!, {
 				...storeParams,
 				offset: lastOrdinal + 1,
 				limit: 200
@@ -295,7 +296,7 @@
 			const firstOrdinal = items[0]?.ordinal ?? 0;
 			if (firstOrdinal === 0) return;
 			const newOffset = Math.max(0, firstOrdinal - 200);
-			const page = await listPhotos(collectionId, {
+			const page = await listPhotos(collectionId!, {
 				...storeParams,
 				offset: newOffset,
 				limit: 200
@@ -734,7 +735,6 @@
 
 <svelte:window onkeydown={onKeyDown} />
 
-<!-- svelte-ignore a11y_no_static_element_interactions -->
 <div
 	class="fixed inset-0 z-50 touch-none overflow-hidden"
 	onclick={handleTap}

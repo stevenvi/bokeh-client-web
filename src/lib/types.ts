@@ -4,6 +4,7 @@ export interface CollectionSummary {
 	id: number;
 	name: string;
 	type: string;
+	date?: string | null;
 }
 
 export interface CollectionView {

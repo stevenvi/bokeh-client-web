@@ -283,7 +283,6 @@
 
 {#if layout() && containerRect}
 	{@const l = layout()!}
-	<!-- svelte-ignore a11y_no_static_element_interactions -->
 	<div
 		bind:this={sidebarEl}
 		class="fixed right-0 z-20 flex w-10 flex-col select-none lg:w-14"

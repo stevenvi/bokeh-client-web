@@ -318,7 +318,7 @@
 											{/if}
 										</div>
 										{#if isHighlighted}
-											<IconPlay class="text-yellow-900 h-3.5 w-3.5 flex-shrink-0" aria-hidden="true" />
+											<IconPlay class="text-yellow-900 h-3.5 w-3.5 flex-shrink-0" />
 										{/if}
 										<span class="flex-shrink-0 text-sm tabular-nums {isHighlighted ? 'text-yellow-900' : 'text-text-primary text-shadow-dark'}">
 											{formatDuration(episode.duration_seconds)}

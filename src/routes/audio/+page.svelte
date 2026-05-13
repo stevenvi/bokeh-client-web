@@ -23,6 +23,7 @@
 	useBreadcrumb(() => ({ id: -2, name: 'Audio', path: '/audio' }));
 
 	let searchValue = $state(page.url.searchParams.get('q') ?? '');
+	// svelte-ignore state_referenced_locally
 	let debouncedQ = $state(searchValue);
 	let loading = $state(false);
 

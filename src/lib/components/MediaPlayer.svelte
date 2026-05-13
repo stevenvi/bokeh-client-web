@@ -324,7 +324,6 @@
 <audio bind:this={audioEl} class="hidden"></audio>
 
 <!-- Always-present video element — never unmounted, positioned via CSS -->
-<!-- svelte-ignore a11y_media_has_caption -->
 <video
 	bind:this={videoEl}
 	class={videoClasses}
@@ -359,8 +358,6 @@
 
 <!-- Full player controls overlay -->
 {#if showFullPlayer}
-	<!-- svelte-ignore a11y_click_events_have_key_events -->
-	<!-- svelte-ignore a11y_no_static_element_interactions -->
 	<div
 		class="fixed inset-0 z-[49] flex flex-col select-none"
 		onmousemove={showControls}
@@ -369,8 +366,6 @@
 	>
 		<!-- Top breadcrumb (hidden in browser fullscreen) -->
 		{#if !isBrowserFullscreen}
-			<!-- svelte-ignore a11y_click_events_have_key_events -->
-			<!-- svelte-ignore a11y_no_static_element_interactions -->
 			<div
 				class="pointer-events-auto flex items-center bg-gradient-to-b from-black/60 to-transparent px-4 py-3"
 				onclick={(e) => e.stopPropagation()}
@@ -380,8 +375,6 @@
 		{/if}
 
 		<!-- Bottom controls bar -->
-		<!-- svelte-ignore a11y_click_events_have_key_events -->
-		<!-- svelte-ignore a11y_no_static_element_interactions -->
 		<div
 			class="pointer-events-auto mt-auto bg-gradient-to-t from-black/80 to-transparent px-4 py-4 transition-opacity duration-300"
 			class:opacity-0={!controlsVisible}
@@ -435,8 +428,6 @@
 			<!-- Time + scrubber -->
 			<div class="mt-3 flex items-center gap-3">
 				<span class="text-white text-xs tabular-nums w-10 text-right">{formatTime(ps.currentTime)}</span>
-				<!-- svelte-ignore a11y_click_events_have_key_events -->
-				<!-- svelte-ignore a11y_no_static_element_interactions -->
 				<div
 					class="flex-1 h-1 bg-white/30 rounded-full cursor-pointer relative"
 					onclick={handleSeekClick}
@@ -457,8 +448,6 @@
 		class:pl-[110px]={ps.type === 'video'}
 	>
 		<!-- Progress bar (thin line above controls) -->
-		<!-- svelte-ignore a11y_click_events_have_key_events -->
-		<!-- svelte-ignore a11y_no_static_element_interactions -->
 		<div
 			class="h-1 w-full cursor-pointer bg-border"
 			onclick={handleSeekClick}
@@ -474,8 +463,6 @@
 			<!-- ── Audio mini player ── -->
 			<div class="flex items-center gap-3 px-3 py-2">
 				<!-- Clickable area: cover art + track info → navigate to album/show page -->
-				<!-- svelte-ignore a11y_click_events_have_key_events -->
-				<!-- svelte-ignore a11y_no_static_element_interactions -->
 				<div
 					class="flex min-w-0 flex-1 items-center gap-3"
 					class:cursor-pointer={!!ps.collectionPath}
@@ -581,8 +568,6 @@
 			<!-- The <video> element is absolutely positioned at left-0 bottom-0; this section is the right-side info+controls -->
 			<div class="flex items-center gap-3 px-3 py-2">
 				<!-- Clickable title area → navigate to watch page -->
-				<!-- svelte-ignore a11y_click_events_have_key_events -->
-				<!-- svelte-ignore a11y_no_static_element_interactions -->
 				<div
 					class="min-w-0 flex-1 cursor-pointer"
 					onclick={() => ps.watchPath && goto(ps.watchPath)}
