@@ -3,6 +3,7 @@
 	import { imageVariantUrl, dziManifestUrl } from '$lib/api/media';
 	import { selectVariant } from '$lib/utils/variant';
 	import OpenSeadragon from 'openseadragon';
+	import LoadingIndicator from './LoadingIndicator.svelte';
 
 	interface Props {
 		item: PhotoItem;
@@ -282,13 +283,6 @@
 		class:hidden={!showDzi}
 	></div>
 
-	<!-- Loading spinner while manifest/tiles are fetching -->
-	{#if dziLoading}
-		<div class="pointer-events-none absolute inset-0 z-10 flex items-center justify-center">
-			<div class="dzi-spinner"></div>
-		</div>
-	{/if}
-
 	<!-- Exit zoom button -->
 	{#if showDzi}
 		<button
@@ -297,6 +291,16 @@
 		>
 			Exit Zoom
 		</button>
+	{/if}
+
+	<!-- Loading feedback. DZI takes priority over image preview since it's the
+	     newer/more-explicit user action. The image-loading indicator waits a few
+	     frames before appearing so it doesn't flicker into view while the user
+	     is quickly scrolling between cached images. -->
+	{#if dziLoading}
+		<LoadingIndicator label="Loading zoom…" />
+	{:else if !fullLoaded}
+		<LoadingIndicator label="Loading image…" delayFrames={5} />
 	{/if}
 </div>
 
@@ -311,20 +315,4 @@
 		object-fit: contain;
 	}
 
-	.dzi-spinner {
-		width: 36px;
-		height: 36px;
-		border-radius: 50%;
-		border: 3px solid rgba(255, 255, 255, 0.25);
-		border-top-color: rgba(255, 255, 255, 0.85);
-		animation: dzi-spin 0.75s linear infinite;
-		/* Subtle shadow so it's visible on both dark and light images */
-		filter: drop-shadow(0 1px 3px rgba(0, 0, 0, 0.5));
-	}
-
-	@keyframes dzi-spin {
-		to {
-			transform: rotate(360deg);
-		}
-	}
 </style>
