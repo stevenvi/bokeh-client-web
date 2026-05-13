@@ -1,3 +1,7 @@
+<script module lang="ts">
+	let activeMenu = $state<symbol | null>(null);
+</script>
+
 <script lang="ts">
 	import { toastStore } from '$lib/stores/toast';
 	import { IconSpinner, IconThreeDots } from './icons';
@@ -15,11 +19,12 @@
 	}
 
 	let { items }: Props = $props();
-	let open = $state(false);
+	const menuId = Symbol();
+	const open = $derived(activeMenu === menuId);
 	let loading = $state(false);
 
 	async function run(fn: () => Promise<void> | void) {
-		open = false;
+		activeMenu = null;
 		loading = true;
 		try {
 			await fn();
@@ -42,7 +47,7 @@
 <div class="relative">
 	<button
 		class="flex h-6 w-6 items-center justify-center rounded-full bg-black/60 text-white backdrop-blur-sm transition hover:bg-black/80 disabled:opacity-40"
-		onclick={(e) => { e.stopPropagation(); if (!loading) open = !open; }}
+		onclick={(e) => { e.stopPropagation(); if (!loading) activeMenu = open ? null : menuId; }}
 		aria-label="More options"
 	>
 		{#if loading}
@@ -53,7 +58,7 @@
 	</button>
 
 	{#if open}
-		<div class="fixed inset-0 z-40" onclick={(e) => { e.stopPropagation(); open = false; }}></div>
+		<div class="fixed inset-0 z-40" onclick={(e) => { e.stopPropagation(); activeMenu = null; }}></div>
 		<div class="border-border bg-surface absolute right-0 top-full z-50 mt-1 min-w-44 overflow-hidden rounded-lg border shadow-xl">
 			{#each items as item}
 				{#if item.fileAccept && item.onFile}
