@@ -3,7 +3,63 @@
 	import { imageVariantUrl, dziManifestUrl } from '$lib/api/media';
 	import { selectVariant } from '$lib/utils/variant';
 	import OpenSeadragon from 'openseadragon';
+	import { onDestroy } from 'svelte';
 	import LoadingIndicator from './LoadingIndicator.svelte';
+
+	// OSD's ImageLoader.clear() only aborts queued (unstarted) jobs; in-flight
+	// jobs aren't even tracked as objects (jobsInProgress is a counter). So we
+	// wrap OpenSeadragon.ImageJob once to maintain our own Set of live jobs.
+	// On teardown we iterate the Set and call job.abort() — which routes to the
+	// tile source's downloadTileAbort and ultimately xhr.abort().
+	// eslint-disable-next-line @typescript-eslint/no-explicit-any
+	const inflightImageJobs = new Set<any>();
+	// eslint-disable-next-line @typescript-eslint/no-explicit-any
+	const OrigImageJob = (OpenSeadragon as any).ImageJob;
+	// eslint-disable-next-line @typescript-eslint/no-explicit-any
+	function TrackingImageJob(this: any, options: any) {
+		OrigImageJob.call(this, options);
+		inflightImageJobs.add(this);
+		const origCallback = this.callback;
+		// eslint-disable-next-line @typescript-eslint/no-explicit-any
+		this.callback = (job: any) => {
+			inflightImageJobs.delete(job);
+			if (origCallback) origCallback(job);
+		};
+	}
+	TrackingImageJob.prototype = OrigImageJob.prototype;
+	// eslint-disable-next-line @typescript-eslint/no-explicit-any
+	(OpenSeadragon as any).ImageJob = TrackingImageJob;
+
+	function abortAllInflightTiles() {
+		for (const job of inflightImageJobs) {
+			if (typeof job.abort === 'function') {
+				try {
+					job.abort();
+				} catch {
+					// ignore — best-effort cleanup
+				}
+			}
+		}
+		inflightImageJobs.clear();
+	}
+
+	// Stop the viewer from issuing any further tile requests AND drop everything
+	// already in flight. Needed before goHome (which sweeps zoom levels and would
+	// otherwise enqueue tile loads we'll never use) and on full teardown.
+	// eslint-disable-next-line @typescript-eslint/no-explicit-any
+	function shutdownTileLoading(v: any) {
+		const loader = v.imageLoader;
+		// 1. Block new jobs. OSD's drawer keeps calling addJob during the
+		//    goHome animation as the viewport sweeps zoom levels.
+		loader.addJob = () => {};
+		// 2. Drain queued (unstarted) jobs. clear() iterates jobQueue, calls
+		//    each job.abort(), and empties the queue — without this, queued
+		//    jobs would still start as jobsInProgress drops.
+		loader.clear();
+		// 3. Abort in-flight jobs (their XHRs). OSD doesn't track these as
+		//    objects; our wrapped ImageJob constructor does.
+		abortAllInflightTiles();
+	}
 
 	interface Props {
 		item: PhotoItem;
@@ -60,6 +116,7 @@
 		dziLoading = false;
 		exitingToHome = false;
 		if (viewer) {
+			shutdownTileLoading(viewer);
 			viewer.destroy();
 			viewer = null;
 		}
@@ -94,6 +151,7 @@
 				tileSources: { type: 'image', url: imageVariantUrl(item.id, variant) },
 				showNavigationControl: false,
 				ajaxWithCredentials: true,
+				loadTilesWithAjax: true,
 				// Constrain viewport: can't zoom out past "fit", can't drag image off-screen.
 				minZoomImageRatio: 1,
 				visibilityRatio: 1,
@@ -213,6 +271,12 @@
 		// Notify parent so it can reset zoomed state
 		onZoomExit?.();
 
+		// Stop and abort all tile loading BEFORE the goHome animation runs.
+		// The animation sweeps zoom levels and would otherwise enqueue many
+		// new tile fetches that we'll never use. The drawer keeps painting
+		// whatever tiles are already in its cache.
+		if (viewer) shutdownTileLoading(viewer);
+
 		// If the viewer isn't at home (fit + centered), animate it there first.
 		// The OSD canvas displays the same preview the <img> backdrop holds, so
 		// once we're back at home the swap is visually a no-op.
@@ -232,6 +296,16 @@
 
 		teardownDzi();
 	}
+
+	// Ensure the viewer is torn down when the component unmounts. Without this, OSD is
+	// orphaned and its in-flight tile requests run to completion.
+	onDestroy(() => {
+		if (viewer) {
+			shutdownTileLoading(viewer);
+			viewer.destroy();
+			viewer = null;
+		}
+	});
 
 	function teardownDzi() {
 		// Tear down OSD and unhide the <img> in one frame — no transitions.
