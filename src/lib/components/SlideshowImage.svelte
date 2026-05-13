@@ -88,16 +88,6 @@
 		return checkImg.complete && checkImg.naturalWidth > 0;
 	});
 
-	// Show the thumb as a stand-in while the full image loads, but only if the
-	// browser already has it in memory (it should from the grid view). If it's
-	// not cached, we skip it rather than triggering an extra fetch.
-	const thumbCached = $derived.by(() => {
-		if (fullLoaded) return false;
-		const check = new Image();
-		check.src = imageVariantUrl(item.id, 'thumb');
-		return check.complete && check.naturalWidth > 0;
-	});
-
 	let showDzi = $state(false);
 	let osdReady = $state(false);
 	let dziLoading = $state(false);
@@ -321,17 +311,6 @@
 </script>
 
 <div class="relative h-full w-full">
-	<!-- Thumb stand-in: shown while full image loads, only if already in browser
-	     cache. Hidden entirely while DZI is up. -->
-	{#if thumbCached && !showDzi}
-		<img
-			src={imageVariantUrl(item.id, 'thumb')}
-			alt=""
-			class="absolute inset-0 h-full w-full object-contain"
-			aria-hidden="true"
-		/>
-	{/if}
-
 	<!-- Full-res image — scaled to fill viewport while preserving aspect ratio.
 	     Stays in view during DZI entry until OSD has painted its first tile;
 	     then removed from layout (display:none) so OSD's canvas is the only

@@ -7,6 +7,7 @@
 	import { navigationStore } from '$lib/stores/navigation';
 	import { goBack } from '$lib/utils/breadcrumb.svelte';
 	import { selectVariant } from '$lib/utils/variant';
+	import * as imagePreloader from '$lib/utils/imagePreloader';
 	import type { PhotoItem } from '$lib/types';
 	import SlideshowImage from './SlideshowImage.svelte';
 	import SlideshowOverlay from './SlideshowOverlay.svelte';
@@ -53,6 +54,14 @@
 	const startIndex = startOrdinal != null ? items.findIndex((i) => i.ordinal === startOrdinal) : -1;
 	// svelte-ignore state_referenced_locally
 	let currentIndex = $state(startIndex >= 0 ? startIndex : 0);
+
+	// Scroll direction drives the preload window. 'stationary' is the initial
+	// state — kept until the user makes their first move, at which point it
+	// commits to 'forward' or 'backward' and only flips on a reverse move.
+	// Set explicitly at navigation entry points (advance() and the swipe-commit
+	// path) so loadInitial()'s currentIndex assignment can't accidentally
+	// trigger a direction change.
+	let direction = $state<'stationary' | 'forward' | 'backward'>('stationary');
 
 	// svelte-ignore state_referenced_locally
 	let playing = $state(autoplay);
@@ -155,22 +164,72 @@
 		return result;
 	});
 
-	// Preload ±2 images into the browser cache
+	// Rolling preload window. Both the window contents and the issue order
+	// (which the browser largely respects as priority order) bias on scroll
+	// direction.
+	//
+	// Thumb window (5 items, current always included):
+	//   stationary: {N-2, N-1, N, N+1, N+2}
+	//   forward:    {N-1, N, N+1, N+2, N+3}   (one reverse-safety, then ahead)
+	//   backward:   {N-3, N-2, N-1, N, N+1}   (mirrored)
+	// Fullscreen window (3 items, current always included):
+	//   stationary: {N-1, N, N+1}
+	//   forward:    {N,   N+1, N+2}
+	//   backward:   {N-2, N-1, N}
+	//
+	// Issue order = priority. Always: current thumb first, then current
+	// fullscreen. After that, the next-in-direction thumb/full pair, then
+	// further-out thumbs, with reverse-safety at the tail.
 	$effect(() => {
-		const indices = [
-			currentIndex,     // current (highest priority)
-			currentIndex + 1, // next
-			currentIndex - 1, // prev
-			currentIndex + 2, // next+1
-			currentIndex - 2  // prev-1
-		];
-		for (const idx of indices) {
-			if (idx >= 0 && idx < items.length) {
-				const url = imageVariantUrl(items[idx].id, variant);
-				const img = new Image();
-				img.src = url;
-			}
+		const desired: Array<{ url: string; priority?: 'high' | 'low' | 'auto' }> = [];
+
+		const pushThumb = (offset: number, priority: 'high' | 'low' | 'auto') => {
+			const i = currentIndex + offset;
+			if (i < 0 || i >= items.length) return;
+			desired.push({ url: imageVariantUrl(items[i].id, 'thumb'), priority });
+		};
+		const pushFull = (offset: number, priority: 'high' | 'low' | 'auto') => {
+			const i = currentIndex + offset;
+			if (i < 0 || i >= items.length) return;
+			desired.push({ url: imageVariantUrl(items[i].id, variant), priority });
+		};
+
+		// (1) Current — highest priority, ALWAYS issued first.
+		pushThumb(0, 'high');
+		pushFull(0, 'high');
+
+		if (direction === 'stationary') {
+			// Symmetric, near-first. Forward edge first since the user is more
+			// likely to swipe forward than backward from a fresh load.
+			pushThumb(+1, 'auto');
+			pushFull(+1, 'auto');
+			pushThumb(-1, 'auto');
+			pushFull(-1, 'auto');
+			pushThumb(+2, 'low');
+			pushThumb(-2, 'low');
+		} else if (direction === 'forward') {
+			pushThumb(+1, 'auto');
+			pushFull(+1, 'auto');
+			pushThumb(+2, 'low');
+			pushFull(+2, 'low');
+			pushThumb(+3, 'low');
+			pushThumb(-1, 'low'); // reverse safety — tail of the queue
+		} else {
+			// backward
+			pushThumb(-1, 'auto');
+			pushFull(-1, 'auto');
+			pushThumb(-2, 'low');
+			pushFull(-2, 'low');
+			pushThumb(-3, 'low');
+			pushThumb(+1, 'low'); // reverse safety — tail of the queue
 		}
+
+		imagePreloader.setDesired(desired);
+	});
+
+	// Abort everything in flight when leaving the slideshow.
+	onDestroy(() => {
+		imagePreloader.clearAll();
 	});
 
 	onMount(async () => {
@@ -284,6 +343,10 @@
 	function advance(dir: 1 | -1) {
 		const next = currentIndex + dir;
 		if (next < 0 || next >= items.length) return;
+
+		// Commit scroll direction up front — preload window biases on this even
+		// while the slide animation is still in flight.
+		direction = dir === 1 ? 'forward' : 'backward';
 
 		if (transitioning) {
 			// Buffer at most one pending advance (replaces any existing pending)
@@ -580,6 +643,9 @@
 			const dir = dx < 0 ? 1 : -1;
 			const next = currentIndex + dir;
 			if (next >= 0 && next < items.length) {
+				// Commit scroll direction so the preload window biases ahead of
+				// the actual currentIndex update (which happens in finishSlide).
+				direction = dir === 1 ? 'forward' : 'backward';
 				transitioning = true;
 				transitionHandled = false;
 				// Commit current swipe position without transition, then animate to target
@@ -713,6 +779,17 @@
 					style="transform: translateX(calc({(vi.index - currentIndex) * 100}% + {slideOffsetPx}px)); --easing: {slideEasing}"
 					ontransitionend={onSlideTransitionEnd}
 				>
+					<!-- Thumb backdrop: same aspect ratio as the fullscreen variant,
+					     so once the fullscreen <img> below loads it covers this
+					     completely. Before the fullscreen lands, this is what the
+					     user sees instead of a black screen. Both <img> tags share
+					     this slide's transform, so they pan together on swipe. -->
+					<img
+						src={imageVariantUrl(vi.item.id, 'thumb')}
+						alt=""
+						aria-hidden="true"
+						class="slide-img"
+					/>
 					<img
 						src={imageVariantUrl(vi.item.id, variant)}
 						alt={vi.item.title}
