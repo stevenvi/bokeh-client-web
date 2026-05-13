@@ -1,9 +1,10 @@
 <script lang="ts">
-	import { createQuery, createInfiniteQuery } from '@tanstack/svelte-query';
+	import { createInfiniteQuery } from '@tanstack/svelte-query';
 	import { goto } from '$app/navigation';
-	import { listArtists } from '$lib/api/music';
+	import { listArtists, artistImageUrl } from '$lib/api/music';
 	import ArtistTile from './ArtistTile.svelte';
 	import AdminTileMenu from './AdminTileMenu.svelte';
+	import ConfirmPopup from './ConfirmPopup.svelte';
 	import ScrollRestore from './ScrollRestore.svelte';
 	import { authStore } from '$lib/stores/auth';
 	import { adminUploadArtistImage, adminDeleteArtistImage } from '$lib/api/admin';
@@ -51,6 +52,22 @@
 	function openArtist(artistId: number) {
 		goto(`/audio/${collectionId}/artist/${artistId}`);
 	}
+
+	let removeImageTarget = $state<{ id: number; name: string } | null>(null);
+
+	async function handleRemoveImage() {
+		const target = removeImageTarget;
+		if (!target) return;
+		try {
+			await adminDeleteArtistImage(target.id);
+			bumpArtistImageBust(target.id);
+			toastStore.show('Artist image removed.');
+		} catch (e: unknown) {
+			toastStore.show(e instanceof Error ? e.message : 'Failed to remove image.');
+		} finally {
+			removeImageTarget = null;
+		}
+	}
 </script>
 
 <ScrollRestore path={`/audio/${collectionId}`} />
@@ -79,7 +96,7 @@
 							<div class="absolute top-1 right-1 z-10" onclick={(e) => e.stopPropagation()}>
 								<AdminTileMenu items={[
 									{ emoji: '🖼', label: 'Upload Image', fileAccept: 'image/*', onFile: async (f) => { await adminUploadArtistImage(artist.id, f); bumpArtistImageBust(artist.id); toastStore.show('Artist image updated.'); } },
-									{ emoji: '🗑', label: 'Remove Image', action: async () => { await adminDeleteArtistImage(artist.id); bumpArtistImageBust(artist.id); toastStore.show('Artist image removed.'); } }
+									{ emoji: '🗑', label: 'Remove Image', action: () => { removeImageTarget = { id: artist.id, name: artist.name }; } }
 								]} />
 							</div>
 						{/if}
@@ -90,3 +107,16 @@
 		{/if}
 	</div>
 </div>
+
+{#if removeImageTarget}
+	<ConfirmPopup
+		title="Remove Image — {removeImageTarget.name}"
+		message="Remove the image for this artist?"
+		imageUrl={artistImageUrl(removeImageTarget.id) + ($artistImageBust[removeImageTarget.id] ? `?v=${$artistImageBust[removeImageTarget.id]}` : '')}
+		imageAlt={removeImageTarget.name}
+		confirmLabel="Remove"
+		destructive={true}
+		onConfirm={handleRemoveImage}
+		onCancel={() => (removeImageTarget = null)}
+	/>
+{/if}

@@ -7,9 +7,11 @@
 	import { mediaPlayer } from '$lib/stores/mediaPlayer';
 	import AlbumTile from './AlbumTile.svelte';
 	import AdminTileMenu from './AdminTileMenu.svelte';
+	import ConfirmPopup from './ConfirmPopup.svelte';
 	import ScrollRestore from './ScrollRestore.svelte';
 	import { authStore } from '$lib/stores/auth';
 	import { adminUploadArtistImage, adminDeleteArtistImage, adminUploadAlbumCover, adminDeleteAlbumCover } from '$lib/api/admin';
+	import { albumCoverUrl } from '$lib/api/music';
 	import { artistImageBust, bumpArtistImageBust, albumCoverBust, bumpAlbumCoverBust } from '$lib/stores/coverBust';
 	import { toastStore } from '$lib/stores/toast';
 
@@ -46,6 +48,39 @@
 
 	function playAlbum(albumId: number) {
 		mediaPlayer.playAlbum(rootCollectionId, albumId, `/audio/${rootCollectionId}/artist/${artistId}/album/${albumId}`);
+	}
+
+	let removeArtistImageTarget = $state<{ id: number; name: string } | null>(null);
+	let removeAlbumCoverTarget = $state<{ id: number; name: string } | null>(null);
+
+	async function handleRemoveArtistImage() {
+		const target = removeArtistImageTarget;
+		if (!target) return;
+		try {
+			await adminDeleteArtistImage(target.id);
+			artistImageError = true;
+			artistImageLoaded = false;
+			bumpArtistImageBust(target.id);
+			toastStore.show('Artist image removed.');
+		} catch (e: unknown) {
+			toastStore.show(e instanceof Error ? e.message : 'Failed to remove image.');
+		} finally {
+			removeArtistImageTarget = null;
+		}
+	}
+
+	async function handleRemoveAlbumCover() {
+		const target = removeAlbumCoverTarget;
+		if (!target) return;
+		try {
+			await adminDeleteAlbumCover(target.id);
+			bumpAlbumCoverBust(target.id);
+			toastStore.show('Album cover removed.');
+		} catch (e: unknown) {
+			toastStore.show(e instanceof Error ? e.message : 'Failed to remove cover.');
+		} finally {
+			removeAlbumCoverTarget = null;
+		}
 	}
 </script>
 
@@ -88,7 +123,7 @@
 					<div class="absolute top-0 right-0 z-10">
 						<AdminTileMenu items={[
 							{ emoji: '🖼', label: 'Upload Image', fileAccept: 'image/*', onFile: async (f) => { await adminUploadArtistImage(artist.id, f); artistImageError = false; artistImageLoaded = false; bumpArtistImageBust(artist.id); toastStore.show('Artist image updated.'); } },
-							{ emoji: '🗑', label: 'Remove Image', action: async () => { await adminDeleteArtistImage(artist.id); artistImageError = true; artistImageLoaded = false; bumpArtistImageBust(artist.id); toastStore.show('Artist image removed.'); } }
+							{ emoji: '🗑', label: 'Remove Image', action: () => { removeArtistImageTarget = { id: artist.id, name: artist.name }; } }
 						]} />
 					</div>
 				{/if}
@@ -121,7 +156,7 @@
 								<div class="absolute top-1 right-1 z-10" onclick={(e) => e.stopPropagation()}>
 									<AdminTileMenu items={[
 										{ emoji: '🖼', label: 'Upload Cover', fileAccept: 'image/*', onFile: async (f) => { await adminUploadAlbumCover(album.album_id, f); bumpAlbumCoverBust(album.album_id); toastStore.show('Album cover updated.'); } },
-										{ emoji: '🗑', label: 'Remove Cover', action: async () => { await adminDeleteAlbumCover(album.album_id); bumpAlbumCoverBust(album.album_id); toastStore.show('Album cover removed.'); } }
+										{ emoji: '🗑', label: 'Remove Cover', action: () => { removeAlbumCoverTarget = { id: album.album_id, name: album.name }; } }
 									]} />
 								</div>
 							{/if}
@@ -132,3 +167,29 @@
 		</div>
 	{/if}
 </div>
+
+{#if removeArtistImageTarget}
+	<ConfirmPopup
+		title="Remove Image — {removeArtistImageTarget.name}"
+		message="Remove the image for this artist?"
+		imageUrl={artistImageUrl(removeArtistImageTarget.id) + ($artistImageBust[removeArtistImageTarget.id] ? `?v=${$artistImageBust[removeArtistImageTarget.id]}` : '')}
+		imageAlt={removeArtistImageTarget.name}
+		confirmLabel="Remove"
+		destructive={true}
+		onConfirm={handleRemoveArtistImage}
+		onCancel={() => (removeArtistImageTarget = null)}
+	/>
+{/if}
+
+{#if removeAlbumCoverTarget}
+	<ConfirmPopup
+		title="Remove Cover — {removeAlbumCoverTarget.name}"
+		message="Remove the cover image for this album?"
+		imageUrl={albumCoverUrl(removeAlbumCoverTarget.id, $albumCoverBust[removeAlbumCoverTarget.id])}
+		imageAlt={removeAlbumCoverTarget.name}
+		confirmLabel="Remove"
+		destructive={true}
+		onConfirm={handleRemoveAlbumCover}
+		onCancel={() => (removeAlbumCoverTarget = null)}
+	/>
+{/if}

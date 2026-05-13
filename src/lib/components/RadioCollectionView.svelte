@@ -4,9 +4,11 @@
 	import { listShows } from '$lib/api/radio';
 	import ShowTile from './ShowTile.svelte';
 	import AdminTileMenu from './AdminTileMenu.svelte';
+	import ConfirmPopup from './ConfirmPopup.svelte';
 	import ScrollRestore from './ScrollRestore.svelte';
 	import { authStore } from '$lib/stores/auth';
 	import { adminUploadArtistImage, adminDeleteArtistImage } from '$lib/api/admin';
+	import { artistImageUrl } from '$lib/api/music';
 	import { artistImageBust, bumpArtistImageBust } from '$lib/stores/coverBust';
 	import { toastStore } from '$lib/stores/toast';
 
@@ -27,6 +29,22 @@
 
 	function openShow(showId: number) {
 		goto(`/audio/${collectionId}/show/${showId}`);
+	}
+
+	let removeImageTarget = $state<{ id: number; name: string } | null>(null);
+
+	async function handleRemoveImage() {
+		const target = removeImageTarget;
+		if (!target) return;
+		try {
+			await adminDeleteArtistImage(target.id);
+			bumpArtistImageBust(target.id);
+			toastStore.show('Show image removed.');
+		} catch (e: unknown) {
+			toastStore.show(e instanceof Error ? e.message : 'Failed to remove image.');
+		} finally {
+			removeImageTarget = null;
+		}
 	}
 </script>
 
@@ -56,7 +74,7 @@
 							<div class="absolute top-1 right-1 z-10" onclick={(e) => e.stopPropagation()}>
 								<AdminTileMenu items={[
 									{ emoji: '🖼', label: 'Upload Image', fileAccept: 'image/*', onFile: async (f) => { await adminUploadArtistImage(show.show_id, f); bumpArtistImageBust(show.show_id); toastStore.show('Show image updated.'); } },
-									{ emoji: '🗑', label: 'Remove Image', action: async () => { await adminDeleteArtistImage(show.show_id); bumpArtistImageBust(show.show_id); toastStore.show('Show image removed.'); } }
+									{ emoji: '🗑', label: 'Remove Image', action: () => { removeImageTarget = { id: show.show_id, name: show.name }; } }
 								]} />
 							</div>
 						{/if}
@@ -66,3 +84,16 @@
 		{/if}
 	</div>
 </div>
+
+{#if removeImageTarget}
+	<ConfirmPopup
+		title="Remove Image — {removeImageTarget.name}"
+		message="Remove the image for this show?"
+		imageUrl={artistImageUrl(removeImageTarget.id) + ($artistImageBust[removeImageTarget.id] ? `?v=${$artistImageBust[removeImageTarget.id]}` : '')}
+		imageAlt={removeImageTarget.name}
+		confirmLabel="Remove"
+		destructive={true}
+		onConfirm={handleRemoveImage}
+		onCancel={() => (removeImageTarget = null)}
+	/>
+{/if}

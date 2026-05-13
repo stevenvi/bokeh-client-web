@@ -7,12 +7,19 @@
 	import { mediaPlayer } from '$lib/stores/mediaPlayer';
 	import type { CollectionView, VideoItemView } from '$lib/types';
 	import AdminTileMenu from './AdminTileMenu.svelte';
+	import ConfirmPopup from './ConfirmPopup.svelte';
 	import ScrollRestore from './ScrollRestore.svelte';
 	import VideoTile from './VideoTile.svelte';
 	import { IconFolder } from './icons';
 	import { authStore } from '$lib/stores/auth';
-	import { adminCreateJob, adminUploadCollectionCover, adminUploadVideoCover } from '$lib/api/admin';
-	import { coverBustStore, bumpCoverBust, bumpVideoCoverBust } from '$lib/stores/coverBust';
+	import {
+		adminCreateJob,
+		adminUploadCollectionCover,
+		adminDeleteCollectionCover,
+		adminUploadVideoCover,
+		adminDeleteVideoCover
+	} from '$lib/api/admin';
+	import { coverBustStore, videoCoverBust, bumpCoverBust, bumpVideoCoverBust } from '$lib/stores/coverBust';
 	import { toastStore } from '$lib/stores/toast';
 
 	interface Props {
@@ -63,6 +70,37 @@
 	function onCollectionClick(collectionId: number) {
 		goto(`${basePath}/${collectionId}`);
 	}
+
+	let removeChildCoverTarget = $state<{ id: number; name: string } | null>(null);
+	let removeVideoCoverTarget = $state<{ id: number; title: string } | null>(null);
+
+	async function handleRemoveChildCover() {
+		const target = removeChildCoverTarget;
+		if (!target) return;
+		try {
+			await adminDeleteCollectionCover(target.id);
+			bumpCoverBust(target.id);
+			toastStore.show('Cover removed.');
+		} catch (e: unknown) {
+			toastStore.show(e instanceof Error ? e.message : 'Failed to remove cover.');
+		} finally {
+			removeChildCoverTarget = null;
+		}
+	}
+
+	async function handleRemoveVideoCover() {
+		const target = removeVideoCoverTarget;
+		if (!target) return;
+		try {
+			await adminDeleteVideoCover(target.id);
+			bumpVideoCoverBust(target.id);
+			toastStore.show('Image removed.');
+		} catch (e: unknown) {
+			toastStore.show(e instanceof Error ? e.message : 'Failed to remove image.');
+		} finally {
+			removeVideoCoverTarget = null;
+		}
+	}
 </script>
 
 <ScrollRestore path={basePath} />
@@ -106,7 +144,8 @@
 									<AdminTileMenu items={[
 										{ emoji: '🔄', label: 'Rescan Library', action: async () => { const r = await adminCreateJob('collection_scan', col.id, 'collection'); toastStore.show(`Scan job #${r.id} queued.`); } },
 										{ emoji: '🔃', label: 'Rescan Thumbnails', action: async () => { const r = await adminCreateJob('thumbnail_scan', col.id, 'collection'); toastStore.show(`Thumbnail scan job #${r.id} queued.`); } },
-										{ emoji: '🖼', label: 'Upload Cover Image', fileAccept: 'image/*', onFile: async (f) => { await adminUploadCollectionCover(col.id, f); bumpCoverBust(col.id); toastStore.show('Cover updated.'); } }
+										{ emoji: '🖼', label: 'Upload Cover Image', fileAccept: 'image/*', onFile: async (f) => { await adminUploadCollectionCover(col.id, f); bumpCoverBust(col.id); toastStore.show('Cover updated.'); } },
+										{ emoji: '🗑', label: 'Remove Cover Image', action: () => { removeChildCoverTarget = { id: col.id, name: col.name }; } }
 									]} />
 								</div>
 							{/if}
@@ -137,8 +176,8 @@
 						{#if $authStore?.isAdmin}
 							<div class="absolute top-1 right-1 z-10" onclick={(e) => e.stopPropagation()}>
 								<AdminTileMenu items={[
-									{ emoji: '🔃', label: 'Rescan Thumbnails', action: async () => { const r = await adminCreateJob('thumbnail_scan', collection.id, 'collection'); toastStore.show(`Thumbnail scan job #${r.id} queued.`); } },
-									{ emoji: '🖼', label: 'Upload Image', fileAccept: 'image/*', onFile: async (f) => { await adminUploadVideoCover(item.id, f); bumpVideoCoverBust(item.id); toastStore.show('Image updated.'); } }
+									{ emoji: '🖼', label: 'Upload Image', fileAccept: 'image/*', onFile: async (f) => { await adminUploadVideoCover(item.id, f); bumpVideoCoverBust(item.id); toastStore.show('Image updated.'); } },
+									{ emoji: '🗑', label: 'Remove Image', action: () => { removeVideoCoverTarget = { id: item.id, title: item.title }; } }
 								]} />
 							</div>
 						{/if}
@@ -152,3 +191,29 @@
 		{/if}
 	{/if}
 </div>
+
+{#if removeChildCoverTarget}
+	<ConfirmPopup
+		title="Remove Cover Image — {removeChildCoverTarget.name}"
+		message="Remove the cover image for this collection?"
+		imageUrl={collectionCoverUrl(removeChildCoverTarget.id) + ($coverBustStore[removeChildCoverTarget.id] ? `?v=${$coverBustStore[removeChildCoverTarget.id]}` : '')}
+		imageAlt={removeChildCoverTarget.name}
+		confirmLabel="Remove"
+		destructive={true}
+		onConfirm={handleRemoveChildCover}
+		onCancel={() => (removeChildCoverTarget = null)}
+	/>
+{/if}
+
+{#if removeVideoCoverTarget}
+	<ConfirmPopup
+		title="Remove Image — {removeVideoCoverTarget.title}"
+		message="Remove the image for this video?"
+		imageUrl={videoCoverUrl(removeVideoCoverTarget.id) + ($videoCoverBust[removeVideoCoverTarget.id] ? `?v=${$videoCoverBust[removeVideoCoverTarget.id]}` : '')}
+		imageAlt={removeVideoCoverTarget.title}
+		confirmLabel="Remove"
+		destructive={true}
+		onConfirm={handleRemoveVideoCover}
+		onCancel={() => (removeVideoCoverTarget = null)}
+	/>
+{/if}

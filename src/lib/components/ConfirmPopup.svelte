@@ -2,6 +2,8 @@
 	interface Props {
 		title: string;
 		message: string;
+		imageUrl?: string;
+		imageAlt?: string;
 		confirmLabel?: string;
 		destructive?: boolean;
 		onConfirm: () => void;
@@ -11,6 +13,8 @@
 	let {
 		title,
 		message,
+		imageUrl,
+		imageAlt = '',
 		confirmLabel = 'Confirm',
 		destructive = false,
 		onConfirm,
@@ -33,6 +37,18 @@
 	aria-labelledby="confirm-title"
 >
 	<h2 id="confirm-title" class="text-text-primary mb-3 text-lg font-semibold">{title}</h2>
+	{#if imageUrl}
+		<div class="mb-4 flex justify-center">
+			<div class="bg-surface-raised h-32 w-32 overflow-hidden rounded-lg">
+				<img
+					src={imageUrl}
+					alt={imageAlt}
+					class="h-full w-full object-cover"
+					onerror={(e) => { (e.currentTarget as HTMLImageElement).style.display = 'none'; }}
+				/>
+			</div>
+		</div>
+	{/if}
 	<p class="text-text-secondary mb-6 text-sm leading-relaxed">{message}</p>
 	<div class="flex justify-end gap-3">
 		<button

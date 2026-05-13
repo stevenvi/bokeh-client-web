@@ -6,11 +6,12 @@
 	import { mediaPlayer } from '$lib/stores/mediaPlayer';
 	import type { CollectionView, VideoItemView } from '$lib/types';
 	import AdminTileMenu from './AdminTileMenu.svelte';
+	import ConfirmPopup from './ConfirmPopup.svelte';
 	import ScrollRestore from './ScrollRestore.svelte';
 	import VideoTile from './VideoTile.svelte';
 	import { authStore } from '$lib/stores/auth';
-	import { adminCreateJob, adminUploadVideoCover } from '$lib/api/admin';
-	import { bumpVideoCoverBust } from '$lib/stores/coverBust';
+	import { adminCreateJob, adminUploadVideoCover, adminDeleteVideoCover } from '$lib/api/admin';
+	import { videoCoverBust, bumpVideoCoverBust } from '$lib/stores/coverBust';
 	import { toastStore } from '$lib/stores/toast';
 
 	interface Props {
@@ -29,6 +30,22 @@
 	);
 
 	const items = $derived($itemsQuery.data?.items ?? []);
+
+	let removeVideoCoverTarget = $state<{ id: number; title: string } | null>(null);
+
+	async function handleRemoveVideoCover() {
+		const target = removeVideoCoverTarget;
+		if (!target) return;
+		try {
+			await adminDeleteVideoCover(target.id);
+			bumpVideoCoverBust(target.id);
+			toastStore.show('Image removed.');
+		} catch (e: unknown) {
+			toastStore.show(e instanceof Error ? e.message : 'Failed to remove image.');
+		} finally {
+			removeVideoCoverTarget = null;
+		}
+	}
 
 	function onCardClick(item: VideoItemView) {
 		const wp = `${basePath}/watch/${item.id}`;
@@ -79,7 +96,8 @@
 						<div class="absolute top-1 right-1 z-10" onclick={(e) => e.stopPropagation()}>
 							<AdminTileMenu items={[
 								{ emoji: '🔃', label: 'Rescan Thumbnails', action: async () => { const r = await adminCreateJob('thumbnail_scan', collection.id, 'collection'); toastStore.show(`Thumbnail scan job #${r.id} queued.`); } },
-								{ emoji: '🖼', label: 'Upload Image', fileAccept: 'image/*', onFile: async (f) => { await adminUploadVideoCover(item.id, f); bumpVideoCoverBust(item.id); toastStore.show('Image updated.'); } }
+								{ emoji: '🖼', label: 'Upload Image', fileAccept: 'image/*', onFile: async (f) => { await adminUploadVideoCover(item.id, f); bumpVideoCoverBust(item.id); toastStore.show('Image updated.'); } },
+								{ emoji: '🗑', label: 'Remove Image', action: () => { removeVideoCoverTarget = { id: item.id, title: item.title }; } }
 							]} />
 						</div>
 					{/if}
@@ -88,3 +106,16 @@
 		</div>
 	{/if}
 </div>
+
+{#if removeVideoCoverTarget}
+	<ConfirmPopup
+		title="Remove Image — {removeVideoCoverTarget.title}"
+		message="Remove the image for this video?"
+		imageUrl={videoCoverUrl(removeVideoCoverTarget.id) + ($videoCoverBust[removeVideoCoverTarget.id] ? `?v=${$videoCoverBust[removeVideoCoverTarget.id]}` : '')}
+		imageAlt={removeVideoCoverTarget.title}
+		confirmLabel="Remove"
+		destructive={true}
+		onConfirm={handleRemoveVideoCover}
+		onCancel={() => (removeVideoCoverTarget = null)}
+	/>
+{/if}

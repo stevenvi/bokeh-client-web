@@ -6,6 +6,7 @@
 	import { mediaPlayer } from '$lib/stores/mediaPlayer';
 	import { playingTrackIdFromState } from '$lib/utils/playingTrack.svelte';
 	import AdminTileMenu from './AdminTileMenu.svelte';
+	import ConfirmPopup from './ConfirmPopup.svelte';
 	import ScrollRestore from './ScrollRestore.svelte';
 	import { IconRadio, IconPlay } from './icons';
 	import { authStore } from '$lib/stores/auth';
@@ -198,6 +199,21 @@
 		!$episodesQuery.data?.bookmark ? 'Play from Beginning' : 'Resume'
 	);
 
+	let confirmRemoveImage = $state(false);
+
+	async function handleRemoveImage() {
+		try {
+			await adminDeleteArtistImage(showId);
+			imageError = true;
+			imageLoaded = false;
+			bumpArtistImageBust(showId);
+			toastStore.show('Show image removed.');
+		} catch (e: unknown) {
+			toastStore.show(e instanceof Error ? e.message : 'Failed to remove image.');
+		} finally {
+			confirmRemoveImage = false;
+		}
+	}
 </script>
 
 <ScrollRestore path={showPath} />
@@ -235,7 +251,7 @@
 						<div class="absolute top-1 right-1 z-10">
 							<AdminTileMenu items={[
 								{ emoji: '🖼', label: 'Upload Image', fileAccept: 'image/*', onFile: async (f) => { await adminUploadArtistImage(showId, f); imageError = false; imageLoaded = false; bumpArtistImageBust(showId); toastStore.show('Show image updated.'); } },
-								{ emoji: '🗑', label: 'Remove Image', action: async () => { await adminDeleteArtistImage(showId); imageError = true; imageLoaded = false; bumpArtistImageBust(showId); toastStore.show('Show image removed.'); } }
+								{ emoji: '🗑', label: 'Remove Image', action: () => { confirmRemoveImage = true; } }
 							]} />
 						</div>
 					{/if}
@@ -322,3 +338,17 @@
 		</div>
 	{/if}
 </div>
+
+{#if confirmRemoveImage && $episodesQuery.data}
+	{@const showName = $episodesQuery.data.show.name}
+	<ConfirmPopup
+		title="Remove Image — {showName}"
+		message="Remove the image for this show?"
+		imageUrl={artistImageUrl(showId) + ($artistImageBust[showId] ? `?v=${$artistImageBust[showId]}` : '')}
+		imageAlt={showName}
+		confirmLabel="Remove"
+		destructive={true}
+		onConfirm={handleRemoveImage}
+		onCancel={() => (confirmRemoveImage = false)}
+	/>
+{/if}

@@ -48,10 +48,18 @@ export function adminUploadCollectionCover(id: number, file: File): Promise<void
 	return apiFetchForm<void>(`/api/v1/admin/collections/${id}/cover`, form);
 }
 
+export function adminDeleteCollectionCover(id: number): Promise<void> {
+	return apiFetch<void>(`/api/v1/admin/collections/${id}/cover`, { method: 'DELETE' });
+}
+
 export function adminUploadVideoCover(id: number, file: File): Promise<void> {
 	const form = new FormData();
 	form.append('cover', file);
 	return apiFetchForm<void>(`/api/v1/admin/media/${id}/cover`, form);
+}
+
+export function adminDeleteVideoCover(id: number): Promise<void> {
+	return apiFetch<void>(`/api/v1/admin/media/${id}/cover`, { method: 'DELETE' });
 }
 
 export function adminUploadArtistImage(id: number, file: File): Promise<void> {

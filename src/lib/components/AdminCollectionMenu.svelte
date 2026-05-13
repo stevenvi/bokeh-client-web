@@ -5,12 +5,15 @@
 	import {
 		adminCreateJob,
 		adminUploadCollectionCover,
+		adminDeleteCollectionCover,
 		adminDeleteCollection,
+		adminDeleteDerivatives,
 		adminListCollectionUsers,
 		adminSetCollectionUsers,
 		adminListUsers
 	} from '$lib/api/admin';
-	import { bumpCoverBust } from '$lib/stores/coverBust';
+	import { collectionCoverUrl } from '$lib/api/media';
+	import { coverBustStore, bumpCoverBust } from '$lib/stores/coverBust';
 	import { toastStore } from '$lib/stores/toast';
 	import type { AdminUser } from '$lib/types';
 
@@ -77,6 +80,40 @@
 			confirmDelete = false;
 		}
 	}
+
+	// ── Delete Derivatives ────────────────────────────────────────────────────
+	let confirmDeleteDerivatives = $state(false);
+
+	async function handleDeleteDerivatives() {
+		try {
+			const r = await adminDeleteDerivatives(collection.id);
+			toastStore.show(`Deleted ${r.deleted} derivative file${r.deleted === 1 ? '' : 's'}.`);
+		} catch (e: unknown) {
+			toastStore.show(e instanceof Error ? e.message : 'Failed to delete derivatives.');
+		} finally {
+			confirmDeleteDerivatives = false;
+		}
+	}
+
+	// ── Remove Cover ──────────────────────────────────────────────────────────
+	let confirmRemoveCover = $state(false);
+
+	async function handleRemoveCover() {
+		try {
+			await adminDeleteCollectionCover(collection.id);
+			bumpCoverBust(collection.id);
+			toastStore.show('Cover removed.');
+		} catch (e: unknown) {
+			toastStore.show(e instanceof Error ? e.message : 'Failed to remove cover.');
+		} finally {
+			confirmRemoveCover = false;
+		}
+	}
+
+	const coverPreviewUrl = $derived(
+		collectionCoverUrl(collection.id) +
+			($coverBustStore[collection.id] ? `?v=${$coverBustStore[collection.id]}` : '')
+	);
 </script>
 
 <AdminTileMenu items={[
@@ -84,6 +121,8 @@
 	{ emoji: '🖼', label: 'Rescan Thumbnails', action: async () => { const r = await adminCreateJob('thumbnail_scan', collection.id, 'collection'); toastStore.show(`Thumbnail scan job #${r.id} queued.`); } },
 	{ emoji: '👥', label: 'Grant Access', action: () => openGrantAccess() },
 	{ emoji: '🖼', label: 'Upload Cover Image', fileAccept: 'image/*', onFile: async (f) => { await adminUploadCollectionCover(collection.id, f); bumpCoverBust(collection.id); toastStore.show('Cover updated.'); } },
+	{ emoji: '🗑', label: 'Remove Cover Image', action: () => { confirmRemoveCover = true; } },
+	{ emoji: '🧹', label: 'Delete Derivative Data', action: () => { confirmDeleteDerivatives = true; } },
 	{ emoji: '🗑', label: 'Delete Collection', action: () => { confirmDelete = true; } }
 ]} />
 
@@ -138,5 +177,29 @@
 		destructive={true}
 		onConfirm={handleDelete}
 		onCancel={() => (confirmDelete = false)}
+	/>
+{/if}
+
+{#if confirmDeleteDerivatives}
+	<ConfirmPopup
+		title="Delete derivative data — {collection.name}"
+		message="This will delete all generated thumbnails, previews, and tiles for this collection. Regenerating this data may take a long time."
+		confirmLabel="Delete"
+		destructive={true}
+		onConfirm={handleDeleteDerivatives}
+		onCancel={() => (confirmDeleteDerivatives = false)}
+	/>
+{/if}
+
+{#if confirmRemoveCover}
+	<ConfirmPopup
+		title="Remove Cover Image — {collection.name}"
+		message="Remove the cover image for this collection?"
+		imageUrl={coverPreviewUrl}
+		imageAlt={collection.name}
+		confirmLabel="Remove"
+		destructive={true}
+		onConfirm={handleRemoveCover}
+		onCancel={() => (confirmRemoveCover = false)}
 	/>
 {/if}
